@@ -308,84 +308,201 @@ var grammarLevels=[
 ];
 
 /* ============================================================
-   HOME + GRAMMAR RENDERING
+   SVG ICON LIBRARY — small line-icon set used for level badges
+   and UI chrome instead of emoji, matching the cherrypow house style.
+   ============================================================ */
+function svgI(name,sz){
+  sz=sz||16;var s='xmlns="http://www.w3.org/2000/svg" width="'+sz+'" height="'+sz+'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"';
+  var paths={
+    fire:'<svg '+s+'><path d="M12 12c2-2.96 0-7-1-8 0 3.04-2.74 5.47-4 7-1.26 1.53-2 3.5-2 5.5a7 7 0 0014 0c0-1.15-.22-2.24-.63-3.22"/></svg>',
+    lock:'<svg '+s+'><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>',
+    check:'<svg '+s+'><polyline points="20 6 9 17 4 12"/></svg>',
+    x:'<svg '+s+'><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>',
+    zap:'<svg '+s+'><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>',
+    sprout:'<svg '+s+'><path d="M7 20h10M10 20c5.5-2.5.8-6.4 3-10M9.5 9.4c1.1.8 1.8 2.2 2.3 3.7-2 .4-3.5.4-4.8-.3-1.2-.6-2.3-1.9-3-4.2 2.8-.5 4.4 0 5.5.8zM14.1 6a7 7 0 0 0-1.1 4c1.9-.1 3.3-.6 4.3-1.4 1-1 1.6-2.3 1.7-4.6-2.7.1-4 1-4.9 2z"/></svg>',
+    book:'<svg '+s+'><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>',
+    globe:'<svg '+s+'><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>',
+    star:'<svg '+s+'><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>',
+    speaker:'<svg '+s+'><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>',
+    puzzle:'<svg '+s+'><path d="M19.44 12.85a2.5 2.5 0 0 0 0-3.7 2.75 2.75 0 0 0-1.71-.75H16v-1.7A2.75 2.75 0 0 0 15.25 5a2.5 2.5 0 0 0-3.7 0 2.75 2.75 0 0 0-.75 1.71V8.4H8.9A2.75 2.75 0 0 0 7.15 4.9a2.5 2.5 0 0 0-3.7 3.7 2.75 2.75 0 0 0 1.7.75H6.85v2.1A2.75 2.75 0 0 0 4.9 15.1a2.5 2.5 0 0 0 3.7 3.7 2.75 2.75 0 0 0 .75-1.7V16"/></svg>',
+  };
+  return paths[name]||'';
+}
+var LEVEL_ICON=['sprout','book','globe','zap','star'];
+var LEVEL_COLOR_VAR=['green','blue','amber','red','purple'];
+
+/* ============================================================
+   HOME RENDERING
    ============================================================ */
 function levelStatusText(lv){
   if(!isLevelUnlocked(lv))return 'Locked — finish Level '+(lv-1);
   if(levelPassed(lv))return 'Complete';
-  var g=grammarViewed[lv]?'Grammar reviewed':'Start with grammar';
-  return g;
+  if(grammarViewed[lv])return 'Grammar reviewed — take the quiz';
+  return 'Start with grammar';
 }
 function renderHome(){
   bumpStreak();
   var root=document.getElementById('home-road');
   var h='<div class="home-hero"><h2>한국어 KoreanLang</h2><p>Learn real, everyday Korean — five levels, from greetings to fluent reasoning.</p></div>';
   h+='<div class="stats-row">'+
-     '<div class="stat-card"><div class="sv">'+xp+'</div><div class="sl">XP</div></div>'+
-     '<div class="stat-card"><div class="sv">'+streak+'🔥</div><div class="sl">Day streak</div></div>'+
-     '<div class="stat-card"><div class="sv">'+countLevelsPassed()+'/5</div><div class="sl">Levels done</div></div>'+
+     '<div class="stat-card"><div class="sv" style="color:var(--purple)">'+svgI('zap',16)+' '+xp+'</div><div class="sl">XP</div></div>'+
+     '<div class="stat-card"><div class="sv" style="color:var(--amber)">'+streak+'🔥</div><div class="sl">Day streak</div></div>'+
+     '<div class="stat-card"><div class="sv" style="color:var(--green)">'+countLevelsPassed()+'/5</div><div class="sl">Levels done</div></div>'+
      '</div>';
   h+='<div class="section-title">Levels</div>';
   for(var i=0;i<grammarLevels.length;i++){
     var lv=grammarLevels[i];
     var unlocked=isLevelUnlocked(lv.level);
     var passed=levelPassed(lv.level);
-    h+='<div class="level-card" style="'+(unlocked?'':'opacity:.45')+'" onclick="'+(unlocked?"openLevel("+lv.level+")":"")+'">'+
-       '<div class="lc-icon">'+(unlocked?lv.icon:'🔒')+'</div>'+
-       '<div class="lc-body"><div class="lc-title">Level '+lv.level+' — '+lv.label+'</div>'+
-       '<div class="lc-sub">'+lv.subtitle+'</div>'+
-       '<div class="progress-row"><div class="prog-bar"><div class="prog-fill" style="width:'+(passed?100:(grammarViewed[lv.level]?40:0))+'%;background:var(--'+(passed?'green':'purple')+')"></div></div>'+
-       '<div style="font-size:11px;color:var(--text3)">'+levelStatusText(lv.level)+'</div></div>'+
-       '</div></div>';
+    var colVar=LEVEL_COLOR_VAR[i];
+    var icon=LEVEL_ICON[i];
+    h+='<div class="lvl-card" style="animation-delay:'+(i*0.06)+'s;border-color:'+(unlocked?'var(--'+colVar+'-bg)':'var(--border)')+';opacity:'+(unlocked?'1':'.55')+'" onclick="'+(unlocked?"openLevel("+lv.level+")":"showLockToast("+lv.level+")")+'">'+
+       '<div class="lvl-card-badge" style="color:var(--'+colVar+');background:var(--'+colVar+'-bg);border-color:var(--'+colVar+')">'+(unlocked?svgI(icon,24):svgI('lock',20))+'</div>'+
+       '<div style="flex:1;min-width:0">'+
+       '<div style="font-size:15px;font-weight:700;color:'+(unlocked?'var(--'+colVar+')':'var(--text3)')+'">Level '+lv.level+' — '+lv.label+'</div>'+
+       '<div style="font-size:12px;color:var(--text2);margin-top:2px;line-height:1.5">'+lv.subtitle+'</div>'+
+       '<div class="progress-row"><div class="prog-bar"><div class="prog-fill" style="width:'+(passed?100:(grammarViewed[lv.level]?40:0))+'%;background:var(--'+(passed?'green':colVar)+')"></div></div>'+
+       '<div style="font-size:11px;color:var(--text3);white-space:nowrap">'+levelStatusText(lv.level)+'</div></div>'+
+       '</div>'+
+       (passed?'<div style="color:var(--green);flex-shrink:0">'+svgI('check',18)+'</div>':'')+
+       '</div>';
   }
-  h+='<div class="section-title" style="margin-top:6px">Quick links</div>';
-  h+='<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:20px">'+
-     '<button class="home-sec-btn" onclick="goTo(\'games\')"><div class="home-sec-icon">🎮</div><div class="home-sec-label" style="color:#333">Games</div></button>'+
-     '<button class="home-sec-btn" onclick="goTo(\'growkor\')"><div class="home-sec-icon">🌱</div><div class="home-sec-label" style="color:#333">GrowKOR</div></button>'+
-     '<button class="home-sec-btn" onclick="goTo(\'bank\')"><div class="home-sec-icon">📚</div><div class="home-sec-label" style="color:#333">Library</div></button>'+
-     '</div>';
   root.innerHTML=h;
   document.getElementById('sec-home').style.visibility='visible';
   var splash=document.getElementById('splash-screen');
   if(splash){splash.style.opacity='0';setTimeout(function(){splash.style.display='none';},650);}
 }
 function countLevelsPassed(){var c=0;for(var i=1;i<=5;i++)if(levelPassed(i))c++;return c;}
+function showLockToast(lv){
+  var old=document.getElementById('lock-toast');if(old)old.remove();
+  var t=document.createElement('div');t.id='lock-toast';
+  t.style.cssText='position:fixed;top:60px;left:50%;transform:translateX(-50%);background:var(--amber);color:#1a1200;padding:8px 18px;border-radius:20px;font-size:12px;font-weight:700;z-index:10000;font-family:inherit;pointer-events:none;animation:toastFade 2.1s forwards';
+  t.textContent='Complete Level '+(lv-1)+' to unlock Level '+lv;
+  document.body.appendChild(t);
+  t.addEventListener('animationend',function(){t.remove();});
+}
+
+/* ============================================================
+   GRAMMAR RENDERING — paginated, one pattern per page,
+   interactive tap-to-build word order puzzles per example.
+   ============================================================ */
 var currentGLevel=1;
-function openLevel(lv){currentGLevel=lv;goTo('grammar');renderGrammarLesson(lv);}
+var gramPages=[], gramPageIdx=0, gramPagesLvl=0;
+function openLevel(lv){
+  currentGLevel=lv;
+  if(gramPagesLvl!==lv){gramPages=[];gramPageIdx=0;}
+  goTo('grammar');
+  renderGrammarLesson(lv);
+}
 function renderGrammarHome(){renderGrammarLesson(currentGLevel);}
+function buildGramPages(L){
+  return L.patterns.map(function(pat){return {pat:pat};});
+}
 function renderGrammarLesson(lv){
   currentGLevel=lv;
   grammarViewed[lv]=true; saveState();
   var L=null;for(var i=0;i<grammarLevels.length;i++)if(grammarLevels[i].level===lv)L=grammarLevels[i];
   if(!L)return;
+  if(!gramPages.length||gramPagesLvl!==lv){gramPages=buildGramPages(L);gramPagesLvl=lv;gramPageIdx=0;}
   var root=document.getElementById('grammar-content');
-  var h='<div class="level-tabs">';
-  for(var i=0;i<grammarLevels.length;i++){
-    var g=grammarLevels[i];
-    var unlocked=isLevelUnlocked(g.level);
-    h+='<button class="ltab lv'+g.level+(g.level===lv?' on':'')+'" '+(unlocked?"onclick=\"renderGrammarLesson("+g.level+")\"":'style="opacity:.4"')+'>'+g.icon+' Lv'+g.level+'</button>';
+  var colVar=LEVEL_COLOR_VAR[lv-1];
+  var page=gramPages[gramPageIdx];
+  if(!page){grammarLevelComplete(lv);return;}
+  var h='<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">'+
+    '<button onclick="goTo(\'home\')" style="padding:5px 10px;border-radius:20px;border:1px solid var(--border2);background:transparent;color:var(--text3);cursor:pointer;font-size:11px;font-family:inherit">&larr;</button>'+
+    '<div style="display:flex;align-items:center;gap:6px;color:var(--'+colVar+');flex:1"><span style="display:flex">'+svgI(LEVEL_ICON[lv-1],16)+'</span><span style="font-size:12px;font-weight:700">'+L.label+'</span></div>'+
+    '<div style="font-size:10px;color:var(--text3)">'+(gramPageIdx+1)+' / '+gramPages.length+'</div></div>'+
+    '<div style="height:4px;background:var(--bg3);border-radius:10px;overflow:hidden;margin-bottom:14px">'+
+    '<div style="height:100%;width:'+Math.round((gramPageIdx+1)/gramPages.length*100)+'%;background:var(--'+colVar+');border-radius:10px;transition:width .3s"></div></div>';
+
+  var pat=page.pat;
+  h+='<div style="text-align:center;margin-bottom:14px"><div class="pat-title" style="justify-content:center">'+pat.title+'</div><div class="pat-rule" style="display:inline-block">'+pat.rule+'</div></div>';
+  h+='<div class="card" style="padding:16px 14px">';
+  for(var e=0;e<pat.examples.length;e++){
+    if(e>0)h+='<div style="margin:14px 0;height:1px;background:linear-gradient(90deg,transparent,var(--border2),transparent)"></div>';
+    var ex=pat.examples[e];
+    h+='<div style="text-align:center;margin-bottom:10px">'+
+       '<button onclick="speakKorean(\''+ex.thai.replace(/'/g,"\\'")+'\')" style="background:none;border:none;cursor:pointer;color:var(--purple);display:inline-flex;align-items:center;gap:6px;margin-bottom:4px">'+svgI('speaker',14)+'</button>'+
+       '<div style="font-size:15px;color:var(--text);font-weight:600;line-height:1.5;margin-bottom:2px">'+ex.eng+'</div>'+
+       '<div style="font-size:12px;color:var(--purple);font-weight:500">'+ex.phon+'</div></div>';
+    h+='<div id="gram-interact-'+e+'" style="margin-bottom:6px"></div>';
   }
   h+='</div>';
-  h+='<div class="level-badge lv'+lv+'">'+L.icon+' Level '+lv+' — '+L.label+'</div>';
-  h+='<div class="card"><div style="font-size:13px;color:var(--text2);line-height:1.6">'+L.desc+'</div></div>';
-  for(var p=0;p<L.patterns.length;p++){
-    var pat=L.patterns[p];
-    h+='<div class="card"><div class="pat-title">'+pat.title+'</div><div class="pat-rule">'+pat.rule+'</div>';
-    for(var e=0;e<pat.examples.length;e++){
-      var ex=pat.examples[e];
-      h+='<div class="card-sm" style="cursor:pointer" onclick="speakKorean(\''+ex.thai.replace(/'/g,"\\'")+'\')">';
-      h+='<div class="s-thai">'+ex.thai+'</div><div class="s-phon">'+ex.phon+'</div><div class="s-eng">'+ex.eng+'</div>';
-      h+='<div class="word-row">';
-      for(var w=0;w<ex.words.length;w++){
-        var wd=ex.words[w];
-        h+='<div class="word-chip '+wd.c+'"><div class="wt">'+wd.t+'</div><div class="wp">'+wd.p+'</div><div class="we">'+wd.e+'</div></div>';
-      }
-      h+='</div></div>';
-    }
-    h+='</div>';
-  }
-  h+='<button class="q-next-btn" onclick="goTo(\'quiz\');startQuiz('+lv+')" style="margin-top:6px">Take the Level '+lv+' quiz →</button>';
+  h+='<div id="gram-feedback" style="font-size:14px;font-weight:600;text-align:center;min-height:20px;margin-top:10px"></div>';
+  h+='<button id="gram-next-btn" style="display:none;width:100%;padding:13px;border-radius:var(--rsm);border:1.5px solid var(--'+colVar+');background:var(--'+colVar+'-bg);color:var(--'+colVar+');cursor:pointer;font-size:14px;font-family:inherit;font-weight:600;margin-top:6px">Next →</button>';
   root.innerHTML=h;
+
+  var doneCount=0, total=pat.examples.length;
+  for(var e=0;e<pat.examples.length;e++)(function(ex,idx){
+    var area=document.getElementById('gram-interact-'+idx);
+    if(!area)return;
+    setupGramBuild(area,ex,function(){
+      doneCount++;
+      if(doneCount>=total)gramPageDone(lv,colVar);
+    });
+  })(pat.examples[e],e);
+}
+function setupGramBuild(area,ex,onDone){
+  area.innerHTML='<div class="gb" style="min-height:38px;background:var(--bg3);border:1.5px dashed var(--border2);border-radius:var(--rsm);padding:6px;display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px;justify-content:center"></div>'+
+    '<div class="gt" style="display:flex;flex-wrap:wrap;gap:6px;justify-content:center"></div>';
+  var built=[], correct=ex.words.map(function(w){return w.t;});
+  var jumbled=shuffle(ex.words.slice());
+  var tilesEl=area.querySelector('.gt'), builtEl=area.querySelector('.gb');
+  jumbled.forEach(function(w,i){
+    var btn=document.createElement('button');
+    btn.className='word-chip '+w.c;
+    btn.style.cssText='cursor:pointer;border:1px solid transparent;transition:opacity .2s;animation:tileBounce .3s ease-out both;animation-delay:'+(i*0.05)+'s';
+    btn.innerHTML='<div class="wt">'+w.t+'</div><div class="wp">'+w.p+'</div><div class="we">'+w.e+'</div>';
+    btn.onclick=function(){
+      if(btn.classList.contains('used'))return;
+      if(w.t!==correct[built.length]){
+        btn.style.animation='wrongShake .3s';setTimeout(function(){btn.style.animation='';},300);
+        return;
+      }
+      btn.classList.add('used');btn.style.opacity='.25';btn.style.pointerEvents='none';
+      speakKorean(w.t);
+      built.push(w.t);
+      var chip=document.createElement('div');
+      chip.className='word-chip '+w.c;
+      chip.style.cssText='animation:tileBounce .25s ease-out both';
+      chip.innerHTML='<div class="wt">'+w.t+'</div><div class="wp">'+w.p+'</div>';
+      builtEl.appendChild(chip);
+      if(built.length===correct.length)onDone();
+    };
+    tilesEl.appendChild(btn);
+  });
+}
+var _gramPageDoneFlag=false;
+function gramPageDone(lv,colVar){
+  if(_gramPageDoneFlag)return;_gramPageDoneFlag=true;
+  var fb=document.getElementById('gram-feedback');
+  if(fb){fb.style.color='var(--green)';fb.innerHTML=svgI('check',16)+' Nice!';}
+  var btn=document.getElementById('gram-next-btn');
+  if(btn){
+    btn.style.display='block';
+    btn.textContent=gramPageIdx>=gramPages.length-1?'Finish level →':'Next →';
+    btn.onclick=function(){
+      _gramPageDoneFlag=false;
+      gramPageIdx++;
+      if(gramPageIdx>=gramPages.length){gramPages=[];grammarLevelComplete(lv);}
+      else renderGrammarLesson(lv);
+      var gs=document.getElementById('sec-grammar');if(gs)gs.scrollTop=0;
+    };
+  }
+}
+function grammarLevelComplete(lv){
+  grammarViewed[lv]=true; saveState();
+  var root=document.getElementById('grammar-content');
+  if(!root)return;
+  var colVar=LEVEL_COLOR_VAR[lv-1];
+  root.innerHTML='<div style="text-align:center;padding:30px 0">'+
+    '<div style="display:flex;justify-content:center;color:var(--'+colVar+');margin-bottom:14px">'+svgI('star',48)+'</div>'+
+    '<div style="font-size:20px;font-weight:700;color:var(--'+colVar+');margin-bottom:10px">Level '+lv+' grammar complete!</div>'+
+    '<div style="font-size:14px;color:var(--text2);margin-bottom:22px;line-height:1.6">Ready for the quiz? Pass all 3 tests to unlock the next level.</div>'+
+    '<button onclick="goTo(\'quiz\');startQuiz('+lv+')" style="display:block;width:100%;padding:15px;border-radius:var(--rsm);border:none;background:linear-gradient(135deg,#8F1A1A,#C9333B);color:#fff;cursor:pointer;font-size:15px;font-family:inherit;font-weight:700;margin-bottom:12px">Go to Quiz →</button>'+
+    '<button onclick="gramPages=[];gramPageIdx=0;renderGrammarLesson('+lv+')" style="width:100%;padding:13px;border-radius:var(--rsm);border:1.5px solid var(--border2);background:transparent;color:var(--text2);cursor:pointer;font-size:14px;font-family:inherit;margin-bottom:10px">Review grammar again</button>'+
+    '<button onclick="goTo(\'home\')" style="width:100%;padding:13px;border-radius:var(--rsm);border:1.5px solid var(--border2);background:transparent;color:var(--text3);cursor:pointer;font-size:13px;font-family:inherit">&larr; Back to levels</button>'+
+    '</div>';
 }
 
 /* ============================================================
