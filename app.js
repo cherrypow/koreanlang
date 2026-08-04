@@ -1264,21 +1264,29 @@ function showPhrasesPicker(){
 /* ============================================================
    GAMES — picker + 5 games
    ============================================================ */
+var GAME_IDS=['builder','opposite','convo','match','flash','delivery','cart','transfer','noraebang','suneung'];
 var GAME_LIST=[
   {id:'builder',icon:'🧩',title:'Sentence Builder',desc:'Drag words into the correct Korean order'},
   {id:'opposite',icon:'🃏',title:'Opposite Game',desc:'Tap the opposite meaning'},
   {id:'convo',icon:'🗣',title:'Conversation Fill',desc:'Complete the missing line'},
   {id:'match',icon:'🎯',title:'Word Match',desc:'Match Korean to English against the clock'},
   {id:'flash',icon:'⚡',title:'Flashcard Quiz',desc:'Study any category, 10 at a time'},
+  {id:'delivery',icon:'📦',title:'Delivery Boxes',desc:'Sort the package into the right bin, fast'},
+  {id:'cart',icon:'🍢',title:'Tteokbokki Cart',desc:'Catch the falling word before it lands'},
+  {id:'transfer',icon:'🚇',title:'Transfer',desc:'Ride the line — build the sentence station by station'},
+  {id:'noraebang',icon:'🎤',title:'Noraebang 100',desc:'Speed round — race to a perfect 100'},
+  {id:'suneung',icon:'📝',title:'Suneung Mock Exam',desc:'The final challenge — every level, no mercy',locked:true},
 ];
 function renderGamePicker(){
   document.getElementById('game-picker').style.display='';
-  ['builder','opposite','convo','match','flash'].forEach(function(id){document.getElementById('game-'+id).style.display='none';});
+  GAME_IDS.forEach(function(id){document.getElementById('game-'+id).style.display='none';});
   var el=document.getElementById('game-list');
   var h='';
+  var suneungUnlocked=devMode||countLevelsPassed()===5;
   for(var i=0;i<GAME_LIST.length;i++){
     var g=GAME_LIST[i];
-    h+='<div class="game-card" onclick="openGame(\''+g.id+'\')"><div class="game-icon">'+g.icon+'</div><div><div class="game-title">'+g.title+'</div><div class="game-desc">'+g.desc+'</div></div></div>';
+    var isLocked=g.locked&&!suneungUnlocked;
+    h+='<div class="game-card" style="'+(isLocked?'opacity:.5':'')+'" onclick="'+(isLocked?"showToast('Pass all 5 levels to unlock the Suneung Mock Exam')":"openGame('"+g.id+"')")+'"><div class="game-icon">'+(isLocked?'🔒':g.icon)+'</div><div><div class="game-title">'+g.title+'</div><div class="game-desc">'+g.desc+'</div></div></div>';
   }
   el.innerHTML=h;
 }
@@ -1291,6 +1299,11 @@ function openGame(id){
   if(id==='convo')startConvo();
   if(id==='match')startMatch();
   if(id==='flash'){document.getElementById('flash-picker').style.display='';document.getElementById('flash-quiz').style.display='none';renderFlashCatList();}
+  if(id==='delivery')startDelivery();
+  if(id==='cart')startCart();
+  if(id==='transfer')startTransfer();
+  if(id==='noraebang')startNoraebang();
+  if(id==='suneung'){document.getElementById('sn-intro').style.display='';document.getElementById('sn-quiz').style.display='none';document.getElementById('sn-done').style.display='none';}
 }
 
 /* ---------- Opposite Game ---------- */
@@ -1670,6 +1683,251 @@ function nextCard(){
   renderFlashCard();
 }
 function backToPicker(){document.getElementById('flash-picker').style.display='';document.getElementById('flash-quiz').style.display='none';}
+
+/* ---------- Delivery Boxes (sort into the correct bin, fast) ---------- */
+var dvScore=0, dvTotal=0, dvAnswered=false;
+function startDelivery(){dvScore=0;dvTotal=0;renderDeliveryRound();}
+function renderDeliveryRound(){
+  dvAnswered=false;
+  var pool=vocabUpTo(Math.max(1,currentGLevel||1));
+  if(pool.length<4)pool=MASTER_VOCAB;
+  var item=pick(pool);
+  var wrong=pick(pool.filter(function(w){return w.e!==item.e;}));
+  document.getElementById('dv-word').textContent=item.t;
+  document.getElementById('dv-phon').textContent=item.p;
+  var opts=shuffle([{e:item.e,correct:true},{e:wrong.e,correct:false}]);
+  var el=document.getElementById('dv-bins'); el.innerHTML='';
+  opts.forEach(function(o){
+    var b=document.createElement('button'); b.className='opp-btn'; b.textContent=o.e;
+    b.onclick=function(){
+      if(dvAnswered)return; dvAnswered=true; dvTotal++;
+      var all=el.querySelectorAll('.opp-btn'); for(var k=0;k<all.length;k++)all[k].disabled=true;
+      if(o.correct){dvScore++;xp+=4;updateXP();playCorrect();b.classList.add('correct');document.getElementById('dv-result').innerHTML='<span style="color:var(--green)">Delivered! ✓</span>';}
+      else{playWrong();b.classList.add('wrong');document.getElementById('dv-result').innerHTML='<span style="color:var(--red)">Wrong bin — it was "'+item.e+'"</span>';}
+      document.getElementById('dv-score').textContent='Score: '+dvScore+' / '+dvTotal;
+      setTimeout(renderDeliveryRound,900);
+    };
+    el.appendChild(b);
+  });
+  document.getElementById('dv-result').textContent='';
+  document.getElementById('dv-score').textContent='Score: '+dvScore+' / '+dvTotal;
+}
+
+/* ---------- Tteokbokki Cart (catch the falling word) ---------- */
+var cartScore=0, cartTotal=0, cartAnswered=false, cartTimer=null, cartFallMs=4200;
+function startCart(){cartScore=0;cartTotal=0;renderCartRound();}
+function renderCartRound(){
+  cartAnswered=false;
+  clearTimeout(cartTimer);
+  var pool=vocabUpTo(Math.max(1,currentGLevel||1));
+  if(pool.length<4)pool=MASTER_VOCAB;
+  var item=pick(pool);
+  var distractors=shuffle(pool.filter(function(w){return w.e!==item.e;})).slice(0,2);
+  var opts=shuffle([item].concat(distractors));
+  var falling=document.getElementById('cart-falling');
+  falling.style.transition='none';
+  falling.style.top='-40px';
+  falling.innerHTML='<div style="background:var(--bg3);border:1.5px solid var(--border2);border-radius:10px;padding:8px 14px"><div style="font-size:20px;color:var(--text)">'+item.t+'</div><div style="font-size:11px;color:var(--purple)">'+item.p+'</div></div>';
+  var bowlsEl=document.getElementById('cart-bowls'); bowlsEl.innerHTML='';
+  opts.forEach(function(o){
+    var b=document.createElement('button'); b.className='qbtn'; b.textContent=o.e;
+    b.onclick=function(){cartAnswer(o.e===item.e,b,item);};
+    bowlsEl.appendChild(b);
+  });
+  document.getElementById('cart-result').textContent='';
+  document.getElementById('cart-score').textContent='Score: '+cartScore+' / '+cartTotal;
+  requestAnimationFrame(function(){
+    requestAnimationFrame(function(){
+      falling.style.transition='top '+(cartFallMs/1000)+'s linear';
+      falling.style.top='120px';
+    });
+  });
+  cartTimer=setTimeout(function(){cartAnswer(false,null,item);},cartFallMs);
+}
+function cartAnswer(correct,btn,item){
+  if(cartAnswered)return; cartAnswered=true;
+  clearTimeout(cartTimer);
+  cartTotal++;
+  var allBtns=document.querySelectorAll('#cart-bowls .qbtn'); for(var i=0;i<allBtns.length;i++)allBtns[i].disabled=true;
+  if(correct){cartScore++;xp+=5;updateXP();playCorrect();if(btn)btn.classList.add('correct');document.getElementById('cart-result').innerHTML='<span style="color:var(--green)">Caught it! ✓</span>';}
+  else{playWrong();if(btn)btn.classList.add('wrong');document.getElementById('cart-result').innerHTML='<span style="color:var(--red)">It fell — "'+item.e+'"</span>';}
+  document.getElementById('cart-score').textContent='Score: '+cartScore+' / '+cartTotal;
+  setTimeout(renderCartRound,900);
+}
+
+/* ---------- Transfer (subway-themed sentence order, reuses SB_DATA) ---------- */
+var trIdx=0, trChosen=[], trTotal=0, trCorrect=0;
+function startTransfer(){trIdx=Math.floor(Math.random()*SB_DATA.length);trCorrect=0;trTotal=0;renderTransfer();}
+function renderTransfer(){
+  var s=SB_DATA[trIdx%SB_DATA.length];
+  document.getElementById('tr-lv').textContent='Lv '+s.lv;
+  document.getElementById('tr-prompt').textContent='Build: "'+s.eng+'"';
+  trChosen=[];
+  renderTrLine(s);
+  var tiles=shuffle(s.words.concat(s.distract));
+  var tilesEl=document.getElementById('tr-tiles'); tilesEl.innerHTML='';
+  tiles.forEach(function(w){
+    var el=document.createElement('div'); el.className='tile'; el.innerHTML=w.t+'<div class="tphon">'+w.p+'</div>';
+    el.onclick=function(){
+      if(el.classList.contains('used'))return;
+      var correctWord=s.words[trChosen.length];
+      if(!correctWord || w.t!==correctWord.t){
+        el.style.animation='wrongShake .3s';setTimeout(function(){el.style.animation='';},300);
+        playWrong();
+        return;
+      }
+      el.classList.add('used'); el.style.opacity='.25'; el.style.pointerEvents='none';
+      playTap(); speakKorean(w.t);
+      trChosen.push(w);
+      renderTrLine(s);
+      if(trChosen.length===s.words.length)transferComplete(s);
+    };
+    tilesEl.appendChild(el);
+  });
+  document.getElementById('tr-result').textContent='';
+  document.getElementById('tr-next').style.display='none';
+  document.getElementById('tr-score').textContent='Score: '+trCorrect+' / '+trTotal;
+}
+function renderTrLine(s){
+  var n=s.words.length;
+  var line=document.getElementById('tr-line');
+  var h='<div style="position:absolute;left:5%;right:5%;top:20px;height:3px;background:var(--border2)"></div>';
+  for(var i=0;i<n;i++){
+    var pct=5+(i/(n-1||1))*90;
+    var done=i<trChosen.length;
+    h+='<div style="position:absolute;left:'+pct+'%;top:14px;width:14px;height:14px;border-radius:50%;transform:translateX(-50%);background:'+(done?'var(--green)':'var(--bg3)')+';border:2px solid '+(done?'var(--green)':'var(--border2)')+'"></div>';
+  }
+  var trainPct=trChosen.length===0?5:5+(trChosen.length/(n-1||1))*90;
+  h+='<div style="position:absolute;left:'+trainPct+'%;top:-4px;transform:translateX(-50%);font-size:22px;transition:left .4s ease-out">🚇</div>';
+  line.innerHTML=h;
+}
+function transferComplete(s){
+  trCorrect++;trTotal++;xp+=10;updateXP();playLevelUp();
+  document.getElementById('tr-result').innerHTML='<span style="color:var(--green)">Arrived! ✓</span>';
+  document.getElementById('tr-next').style.display='block';
+  document.getElementById('tr-score').textContent='Score: '+trCorrect+' / '+trTotal;
+}
+function nextTransfer(){trIdx=Math.floor(Math.random()*SB_DATA.length);renderTransfer();}
+
+/* ---------- Noraebang 100 (speed round, race to 100 points) ---------- */
+var nbScore=0, nbStreak=0, nbTimer=null, nbAnswered=false, nbTimeMs=4500, nbRoundsLeft=15;
+function startNoraebang(){nbScore=0;nbStreak=0;nbRoundsLeft=15;renderNoraebangRound();}
+function renderNoraebangRound(){
+  nbAnswered=false;
+  clearTimeout(nbTimer);
+  document.getElementById('nb-score').innerHTML=nbScore+'<span style="font-size:20px;color:var(--text3)">점</span>';
+  document.getElementById('nb-streak').textContent='streak: '+nbStreak;
+  document.getElementById('nb-status').textContent='';
+  if(nbScore>=100){nbWin();return;}
+  if(nbRoundsLeft<=0){nbEnd();return;}
+  nbRoundsLeft--;
+  var pool=vocabUpTo(Math.max(1,currentGLevel||1));
+  if(pool.length<4)pool=MASTER_VOCAB;
+  var item=pick(pool);
+  var wrong=pick(pool.filter(function(w){return w.e!==item.e;}));
+  document.getElementById('nb-word').textContent=item.t;
+  document.getElementById('nb-phon').textContent=item.p;
+  var opts=shuffle([{e:item.e,correct:true},{e:wrong.e,correct:false}]);
+  var el=document.getElementById('nb-opts'); el.innerHTML='';
+  opts.forEach(function(o){
+    var b=document.createElement('button'); b.className='qbtn'; b.textContent=o.e;
+    b.onclick=function(){nbAnswer(o.correct,b);};
+    el.appendChild(b);
+  });
+  var bar=document.getElementById('nb-timerbar');
+  bar.style.transition='none'; bar.style.width='100%';
+  requestAnimationFrame(function(){requestAnimationFrame(function(){bar.style.transition='width '+(nbTimeMs/1000)+'s linear';bar.style.width='0%';});});
+  nbTimer=setTimeout(function(){nbAnswer(false,null);},nbTimeMs);
+}
+function nbAnswer(correct,btn){
+  if(nbAnswered)return; nbAnswered=true;
+  clearTimeout(nbTimer);
+  var all=document.querySelectorAll('#nb-opts .qbtn'); for(var i=0;i<all.length;i++)all[i].disabled=true;
+  if(correct){
+    nbStreak++;
+    var pts=10+Math.min(nbStreak*2,20);
+    nbScore=Math.min(100,nbScore+pts);
+    xp+=3;updateXP();playCorrect();
+    if(btn)btn.classList.add('correct');
+    document.getElementById('nb-status').innerHTML='<span style="color:var(--green)">+'+pts+'</span>';
+  } else {
+    nbStreak=0;
+    playWrong();
+    if(btn)btn.classList.add('wrong');
+    document.getElementById('nb-status').innerHTML='<span style="color:var(--red)">Miss</span>';
+  }
+  setTimeout(renderNoraebangRound,700);
+}
+function nbWin(){
+  document.getElementById('nb-status').innerHTML='<span style="color:var(--amber);font-weight:700">🎉 100점! Perfect score!</span>';
+  document.getElementById('nb-opts').innerHTML='';
+  showVictory();
+}
+function nbEnd(){
+  document.getElementById('nb-status').innerHTML='Final score: '+nbScore+'점 — try again for 100!';
+  document.getElementById('nb-opts').innerHTML='<button class="q-next-btn" onclick="startNoraebang()" style="grid-column:1/3">Play again</button>';
+}
+
+/* ---------- Suneung Mock Exam (capstone: all levels, tougher distractors) ---------- */
+var snQueue=[], snIdx=0, snScore=0, snAnswered=false;
+function startSuneung(){
+  document.getElementById('sn-intro').style.display='none';
+  document.getElementById('sn-quiz').style.display='';
+  document.getElementById('sn-done').style.display='none';
+  snQueue=shuffle(MASTER_VOCAB).slice(0,25);
+  snIdx=0;snScore=0;
+  renderSuneungQ();
+}
+function renderSuneungQ(){
+  snAnswered=false;
+  document.getElementById('sn-progress').textContent='Question '+(snIdx+1)+' of 25';
+  document.getElementById('sn-scoretop').textContent=snScore+' / 25';
+  document.getElementById('sn-bar').style.width=(snIdx/25*100)+'%';
+  var item=snQueue[snIdx];
+  var sameCat=MASTER_VOCAB.filter(function(w){return w.cat===item.cat && w.e!==item.e;});
+  var pool=sameCat.length>=3?sameCat:MASTER_VOCAB.filter(function(w){return w.e!==item.e;});
+  var distractors=shuffle(pool).slice(0,3);
+  var opts=shuffle([item].concat(distractors));
+  document.getElementById('sn-word').textContent=item.t;
+  document.getElementById('sn-phon').textContent=item.p;
+  var el=document.getElementById('sn-opts'); el.innerHTML='';
+  opts.forEach(function(o){
+    var b=document.createElement('button'); b.className='qbtn'; b.textContent=o.e;
+    b.onclick=function(){snAnswer(o.e===item.e,b);};
+    el.appendChild(b);
+  });
+  document.getElementById('sn-result').textContent='';
+  var nb=document.getElementById('sn-next'); nb.disabled=true; nb.style.opacity='.3';
+}
+function snAnswer(correct,btn){
+  if(snAnswered)return; snAnswered=true;
+  var all=document.querySelectorAll('#sn-opts .qbtn'); for(var i=0;i<all.length;i++)all[i].disabled=true;
+  if(correct){snScore++;xp+=6;updateXP();playCorrect();btn.classList.add('correct');document.getElementById('sn-result').innerHTML='<span style="color:var(--green)">Correct ✓</span>';}
+  else{playWrong();btn.classList.add('wrong');document.getElementById('sn-result').innerHTML='<span style="color:var(--red)">Incorrect</span>';}
+  document.getElementById('sn-scoretop').textContent=snScore+' / 25';
+  var nb=document.getElementById('sn-next'); nb.disabled=false; nb.style.opacity='1';
+}
+function nextSuneung(){
+  snIdx++;
+  if(snIdx>=25){suneungDone();return;}
+  renderSuneungQ();
+}
+function suneungGrade(pct){
+  if(pct>=96)return 1; if(pct>=89)return 2; if(pct>=77)return 3; if(pct>=60)return 4; if(pct>=40)return 5;
+  if(pct>=23)return 6; if(pct>=11)return 7; if(pct>=4)return 8; return 9;
+}
+function suneungDone(){
+  document.getElementById('sn-quiz').style.display='none';
+  var doneEl=document.getElementById('sn-done'); doneEl.style.display='';
+  var pct=Math.round(snScore/25*100);
+  var grade=suneungGrade(pct);
+  if(grade<=3)playVictoryFanfare(); else playLevelUp();
+  doneEl.innerHTML='<div style="font-size:15px;color:var(--text2);margin-bottom:10px">Final score</div>'+
+    '<div style="font-size:52px;font-weight:800;color:var(--text);font-family:\'Oswald\',sans-serif">'+snScore+'<span style="font-size:22px;color:var(--text3)">/25</span></div>'+
+    '<div style="font-size:16px;color:#8F1A1A;font-weight:700;margin:14px 0">등급 '+grade+' <span style="color:var(--text3);font-weight:400;font-size:13px">('+pct+'%)</span></div>'+
+    '<button class="q-next-btn" onclick="startSuneung()" style="margin-top:14px">Retake exam</button>'+
+    '<button onclick="backToGames()" style="width:100%;margin-top:10px;padding:13px;border-radius:var(--rsm);border:1.5px solid var(--border2);background:transparent;color:var(--text3);cursor:pointer;font-size:14px;font-family:inherit">← Back to games</button>';
+}
 
 /* ============================================================
    GrowKOR — branching sentence builder (SOV, particles baked in)
