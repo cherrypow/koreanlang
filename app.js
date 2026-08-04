@@ -96,6 +96,7 @@ function goTo(sec, btn){
   if(sec==='bank')renderBank();
   if(sec==='games')renderGamePicker();
   if(sec==='growkor'){grtInitDom();grtUpdateLvButtons();if(!grtRows.length)grtReset();}
+  if(sec==='quiz' && !quizQueue.length)startQuiz(quizLevel||currentGLevel||1);
   window.scrollTo(0,0);
 }
 
@@ -2128,23 +2129,11 @@ function genBankExample(v){
     default: return null;
   }
 }
-/* ---------- generic scene per category, for words with no hand-illustrated example ---------- */
-function genScene(cat){
-  var m={
-    nouns:gsWrap('#1a1035',gsActor(60,'#C9333B')+gsHeart(140,60,'#e84030')),
-    verbs:gsWrap('#16213a',gsActor(60,'#3a7a3a')+gsArrow(95,80,155,80)),
-    descriptors:gsWrap('#1a1035',gsStar(100,60,20)+gsStar(140,90,10)),
-    feelings:gsWrap('#1a1035',gsActor(100,'#d8709a')+gsHeart(150,55,'#e84030')),
-    modals:gsWrap('#1a1035',gsActor(60,'#3D6BC4')+gsCheck(150,60)),
-    time:gsWrap('#1a1a4a',gsClock(100,75)),
-  };
-  return m[cat]||'';
-}
 
 /* ---------- word-tap example-sentence modal ---------- */
 function openWordModal(v){
   playTap();
-  var found=null,foundImg=null;
+  var found=null;
   for(var i=0;i<grammarLevels.length&&!found;i++){
     var pats=grammarLevels[i].patterns;
     for(var p=0;p<pats.length&&!found;p++){
@@ -2154,14 +2143,10 @@ function openWordModal(v){
       }
     }
   }
-  if(found){
-    foundImg=GRAMMAR_IMGS[found.phon]||'';
-  } else if(BANK_EXTRA_EXAMPLES[v.t]){
+  if(!found && BANK_EXTRA_EXAMPLES[v.t]){
     found=BANK_EXTRA_EXAMPLES[v.t];
-    foundImg='';
-  } else if(v.cat&&genBankExample(v)){
+  } else if(!found && v.cat && genBankExample(v)){
     found=genBankExample(v);
-    foundImg=genScene(v.cat);
   }
   var h='<div style="display:flex;align-items:center;gap:10px;margin-bottom:4px">'+
     '<div style="font-size:32px;font-weight:500">'+v.t+'</div>'+
@@ -2171,7 +2156,6 @@ function openWordModal(v){
     '<div style="font-size:14px;color:var(--text2);margin-bottom:14px">'+v.e+'</div>';
   if(found){
     h+='<div style="font-size:11px;font-weight:700;color:var(--purple);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">EXAMPLE SENTENCE</div>';
-    if(foundImg)h+=foundImg;
     h+='<div class="card-sm"><div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">'+
        '<div class="s-thai" style="flex:1;margin-bottom:0">'+found.thai+'</div>'+
        '<button onclick="speakKorean(\''+found.thai.replace(/'/g,"\\'")+'\')" style="background:var(--purple-bg);border:1.5px solid var(--purple-dim);cursor:pointer;padding:4px 10px;border-radius:20px;color:var(--purple);flex-shrink:0;display:flex;align-items:center">'+svgI('speaker',14)+'</button></div>'+
