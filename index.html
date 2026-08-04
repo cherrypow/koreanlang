@@ -48,7 +48,7 @@
       </div>
     </div>
     <div id="q-mode-checklist" style="display:flex;justify-content:center;gap:12px;margin-bottom:16px;flex-wrap:wrap"></div>
-    <div style="margin-bottom:14px">
+    <div id="q-progress-standard" style="margin-bottom:14px">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">
         <div style="font-size:12px;color:var(--text3)" id="q-set-label">Question 1 of 10</div>
         <div style="font-size:12px;font-weight:600;color:var(--text)" id="q-set-score">0 / 10</div>
@@ -58,20 +58,103 @@
       </div>
       <div style="font-size:11px;color:var(--text3);text-align:right;margin-top:3px">Need 7/10 to pass</div>
     </div>
-    <div class="q-card card">
-      <div style="position:relative;text-align:center;margin-bottom:14px">
-        <div class="q-label" id="q-label" style="margin-bottom:0">What does this mean?</div>
+    <div id="q-standard">
+      <div class="q-card card">
+        <div style="position:relative;text-align:center;margin-bottom:14px">
+          <div class="q-label" id="q-label" style="margin-bottom:0">What does this mean?</div>
+        </div>
+        <div class="q-thai" id="q-thai" style="text-align:center;padding:0 40px"></div>
+        <div class="q-phon" id="q-phon" style="text-align:center"></div>
       </div>
-      <div class="q-thai" id="q-thai" style="text-align:center;padding:0 40px"></div>
-      <div class="q-phon" id="q-phon" style="text-align:center"></div>
+      <div id="q-breakdown" style="display:none;margin-top:10px">
+        <div style="font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--text3);margin-bottom:6px">WORD BREAKDOWN</div>
+        <div class="word-row" id="q-word-row"></div>
+      </div>
+      <div class="q-opts" id="q-opts" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:12px 0"></div>
+      <div id="q-result" style="font-size:15px;font-weight:600;text-align:center;min-height:22px;margin:8px 0"></div>
+      <button id="q-next" class="q-next-btn" disabled style="opacity:0.3;cursor:not-allowed" onclick="nextQ()">Next &rarr;</button>
     </div>
-    <div id="q-breakdown" style="display:none;margin-top:10px">
-      <div style="font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--text3);margin-bottom:6px">WORD BREAKDOWN</div>
-      <div class="word-row" id="q-word-row"></div>
+
+    <!-- TEST 3 — one level-specific mini-game per level, dispatched by startQuizMode3() -->
+    <div id="q-test3" style="display:none">
+    <div id="q3-done" style="display:none;text-align:center;padding:20px 10px"></div>
+    <!-- GAME: Delivery Boxes (Level 1) -->
+    <div id="game-delivery" style="display:none;min-height:60vh;flex-direction:column;justify-content:center">
+      <div style="font-size:12px;color:var(--text2);text-align:center;margin-bottom:14px">Sort the package into the correct bin before the belt clears</div>
+      <div id="dv-illust" style="margin-bottom:12px"></div>
+      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:22px 16px;text-align:center;margin-bottom:16px;position:relative;overflow:hidden">
+        <div id="dv-belt" style="height:4px;background:repeating-linear-gradient(90deg,var(--border2) 0 10px,transparent 10px 20px);margin-bottom:16px;border-radius:2px"></div>
+        <div style="font-size:34px;color:var(--text)" id="dv-word"></div>
+        <div style="font-size:14px;color:var(--purple);font-weight:500;margin-top:4px" id="dv-phon"></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px" id="dv-bins"></div>
+      <div style="font-size:15px;font-weight:600;text-align:center;min-height:22px;margin-bottom:8px" id="dv-result"></div>
+      <div style="font-size:12px;color:var(--text3);text-align:center" id="dv-score"></div>
     </div>
-    <div class="q-opts" id="q-opts" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:12px 0"></div>
-    <div id="q-result" style="font-size:15px;font-weight:600;text-align:center;min-height:22px;margin:8px 0"></div>
-    <button id="q-next" class="q-next-btn" disabled style="opacity:0.3;cursor:not-allowed" onclick="nextQ()">Next &rarr;</button>
+
+    <!-- GAME: Tteokbokki Cart (Level 2) -->
+    <div id="game-cart" style="display:none;min-height:60vh;flex-direction:column;justify-content:center">
+      <div style="font-size:12px;color:var(--text2);text-align:center;margin-bottom:10px">Tap the correct bowl before the skewer lands</div>
+      <div id="cart-illust" style="margin-bottom:12px"></div>
+      <div id="cart-track" style="position:relative;height:160px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);margin-bottom:14px;overflow:hidden">
+        <div id="cart-falling" style="position:absolute;left:50%;top:-40px;transform:translateX(-50%);text-align:center;transition:top linear"></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px" id="cart-bowls"></div>
+      <div style="font-size:15px;font-weight:600;text-align:center;min-height:22px;margin-bottom:8px" id="cart-result"></div>
+      <div style="font-size:12px;color:var(--text3);text-align:center" id="cart-score"></div>
+    </div>
+
+    <!-- GAME: Transfer (Level 3, subway) -->
+    <div id="game-transfer" style="display:none;min-height:60vh;flex-direction:column;justify-content:center">
+      <div id="tr-illust" style="margin-bottom:12px"></div>
+      <div style="font-size:13px;color:var(--text2);margin-bottom:14px;text-align:center" id="tr-prompt"></div>
+      <div id="tr-line" style="position:relative;height:44px;margin-bottom:18px"></div>
+      <div id="tr-tiles" style="display:flex;flex-wrap:wrap;gap:7px;justify-content:center;margin-bottom:14px"></div>
+      <div style="font-size:15px;font-weight:600;text-align:center;min-height:22px;margin-bottom:8px" id="tr-result"></div>
+      <button id="tr-next" style="display:none;width:100%;padding:13px;border-radius:var(--rsm);border:1px solid var(--border2);background:transparent;color:var(--text);cursor:pointer;font-size:15px;font-family:inherit;font-weight:600" onclick="nextTransfer()">Next line →</button>
+      <div style="margin-top:10px;font-size:12px;color:var(--text3);text-align:center" id="tr-score"></div>
+    </div>
+
+    <!-- GAME: Noraebang 100 (Level 4) -->
+    <div id="game-noraebang" style="display:none;min-height:60vh;flex-direction:column;justify-content:center">
+      <div id="nb-illust" style="margin-bottom:12px"></div>
+      <div style="text-align:center;margin-bottom:14px">
+        <div style="font-size:48px;font-weight:800;color:var(--amber);font-family:'Oswald',sans-serif" id="nb-score">0<span style="font-size:20px;color:var(--text3)">점</span></div>
+        <div style="font-size:12px;color:var(--text3)" id="nb-streak">streak: 0</div>
+      </div>
+      <div style="height:5px;background:var(--bg3);border-radius:10px;overflow:hidden;margin-bottom:16px"><div id="nb-timerbar" style="height:100%;width:100%;background:var(--amber);border-radius:10px"></div></div>
+      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:22px 16px;text-align:center;margin-bottom:14px">
+        <div style="font-size:32px;color:var(--text)" id="nb-word"></div>
+        <div style="font-size:14px;color:var(--purple);font-weight:500;margin-top:4px" id="nb-phon"></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px" id="nb-opts"></div>
+      <div style="font-size:13px;color:var(--text3);text-align:center;margin-top:10px" id="nb-status"></div>
+    </div>
+
+    <!-- GAME: Suneung Mock Exam (Level 5) -->
+    <div id="game-suneung" style="display:none;min-height:60vh;flex-direction:column;justify-content:center">
+      <div id="sn-intro" style="text-align:center;padding:20px 10px">
+        <div id="sn-illust" style="margin-bottom:12px"></div>
+        <div style="font-size:15px;color:var(--text2);line-height:1.7;margin-bottom:18px">전국이 숨죽이는 순간.<br>10 questions, the hardest distractors in the app.<br>Your result is graded 1st–9th 등급, just like the real exam.</div>
+        <button onclick="startSuneung()" style="width:100%;padding:15px;border-radius:var(--rsm);border:none;background:linear-gradient(135deg,#8F1A1A,#3D6BC4);color:#fff;cursor:pointer;font-size:15px;font-family:inherit;font-weight:700">Begin exam →</button>
+      </div>
+      <div id="sn-quiz" style="display:none">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+          <div style="font-size:12px;color:var(--text3)" id="sn-progress">Question 1 of 10</div>
+          <div style="font-size:12px;font-weight:600;color:var(--text)" id="sn-scoretop">0 / 10</div>
+        </div>
+        <div style="height:5px;background:var(--bg3);border-radius:10px;overflow:hidden;margin-bottom:16px"><div id="sn-bar" style="height:100%;width:0%;background:#8F1A1A;border-radius:10px;transition:width .3s"></div></div>
+        <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:22px 16px;text-align:center;margin-bottom:14px">
+          <div style="font-size:32px;color:var(--text)" id="sn-word"></div>
+          <div style="font-size:14px;color:var(--purple);font-weight:500;margin-top:4px" id="sn-phon"></div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px" id="sn-opts"></div>
+        <div style="font-size:15px;font-weight:600;text-align:center;min-height:22px;margin-bottom:8px" id="sn-result"></div>
+        <button id="sn-next" class="q-next-btn" disabled style="opacity:.3" onclick="nextSuneung()">Next →</button>
+      </div>
+      <div id="sn-done" style="display:none;text-align:center;padding:20px 10px"></div>
+    </div>
+    </div><!-- /q-test3 -->
   </div>
 
   <!-- BANK -->
@@ -227,101 +310,6 @@
       <div style="font-size:15px;font-weight:600;text-align:center;min-height:22px;margin-bottom:8px" id="opp-result"></div>
       <button id="opp-next" style="display:none;width:100%;padding:14px;border-radius:var(--rsm);border:none;background:linear-gradient(135deg,#8F1A1A,#3D6BC4);color:#fff;cursor:pointer;font-size:16px;font-family:inherit;font-weight:700" onclick="nextOpposite()">Next →</button>
       <div style="font-size:12px;color:var(--text3);text-align:center;margin-top:8px" id="opp-score"></div>
-    </div>
-
-    <!-- GAME: Delivery Boxes -->
-    <div id="game-delivery" style="display:none;min-height:80vh;flex-direction:column;justify-content:center">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
-        <div style="font-size:14px;font-weight:600;color:var(--text)">📦 Delivery Boxes</div>
-        <button onclick="backToGames()" style="padding:5px 10px;border-radius:20px;border:1px solid var(--border2);background:transparent;color:var(--text3);cursor:pointer;font-size:12px;font-family:inherit">← Back</button>
-      </div>
-      <div style="font-size:12px;color:var(--text2);text-align:center;margin-bottom:14px">Sort the package into the correct bin before the belt clears</div>
-      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:22px 16px;text-align:center;margin-bottom:16px;position:relative;overflow:hidden">
-        <div id="dv-belt" style="height:4px;background:repeating-linear-gradient(90deg,var(--border2) 0 10px,transparent 10px 20px);margin-bottom:16px;border-radius:2px"></div>
-        <div style="font-size:34px;color:var(--text)" id="dv-word"></div>
-        <div style="font-size:14px;color:var(--purple);font-weight:500;margin-top:4px" id="dv-phon"></div>
-      </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px" id="dv-bins"></div>
-      <div style="font-size:15px;font-weight:600;text-align:center;min-height:22px;margin-bottom:8px" id="dv-result"></div>
-      <div style="font-size:12px;color:var(--text3);text-align:center" id="dv-score"></div>
-    </div>
-
-    <!-- GAME: Tteokbokki Cart -->
-    <div id="game-cart" style="display:none;min-height:80vh;flex-direction:column;justify-content:center">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
-        <div style="font-size:14px;font-weight:600;color:var(--text)">🍢 Tteokbokki Cart</div>
-        <button onclick="backToGames()" style="padding:5px 10px;border-radius:20px;border:1px solid var(--border2);background:transparent;color:var(--text3);cursor:pointer;font-size:12px;font-family:inherit">← Back</button>
-      </div>
-      <div style="font-size:12px;color:var(--text2);text-align:center;margin-bottom:10px">Tap the correct bowl before the skewer lands</div>
-      <div id="cart-track" style="position:relative;height:160px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);margin-bottom:14px;overflow:hidden">
-        <div id="cart-falling" style="position:absolute;left:50%;top:-40px;transform:translateX(-50%);text-align:center;transition:top linear"></div>
-      </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px" id="cart-bowls"></div>
-      <div style="font-size:15px;font-weight:600;text-align:center;min-height:22px;margin-bottom:8px" id="cart-result"></div>
-      <div style="font-size:12px;color:var(--text3);text-align:center" id="cart-score"></div>
-    </div>
-
-    <!-- GAME: Transfer (subway) -->
-    <div id="game-transfer" style="display:none;min-height:80vh;flex-direction:column;justify-content:center">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-        <div style="font-size:14px;font-weight:600;color:var(--text)">🚇 Transfer</div>
-        <div style="display:flex;gap:6px;align-items:center">
-          <div class="lv-pill" id="tr-lv">Lv 1</div>
-          <button onclick="backToGames()" style="padding:5px 10px;border-radius:20px;border:1px solid var(--border2);background:transparent;color:var(--text3);cursor:pointer;font-size:12px;font-family:inherit">← Back</button>
-        </div>
-      </div>
-      <div style="font-size:13px;color:var(--text2);margin-bottom:14px;text-align:center" id="tr-prompt"></div>
-      <div id="tr-line" style="position:relative;height:44px;margin-bottom:18px"></div>
-      <div id="tr-tiles" style="display:flex;flex-wrap:wrap;gap:7px;justify-content:center;margin-bottom:14px"></div>
-      <div style="font-size:15px;font-weight:600;text-align:center;min-height:22px;margin-bottom:8px" id="tr-result"></div>
-      <button id="tr-next" style="display:none;width:100%;padding:13px;border-radius:var(--rsm);border:1px solid var(--border2);background:transparent;color:var(--text);cursor:pointer;font-size:15px;font-family:inherit;font-weight:600" onclick="nextTransfer()">Next line →</button>
-      <div style="margin-top:10px;font-size:12px;color:var(--text3);text-align:center" id="tr-score"></div>
-    </div>
-
-    <!-- GAME: Noraebang 100 -->
-    <div id="game-noraebang" style="display:none;min-height:80vh;flex-direction:column;justify-content:center">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-        <div style="font-size:14px;font-weight:600;color:var(--text)">🎤 Noraebang 100</div>
-        <button onclick="backToGames()" style="padding:5px 10px;border-radius:20px;border:1px solid var(--border2);background:transparent;color:var(--text3);cursor:pointer;font-size:12px;font-family:inherit">← Back</button>
-      </div>
-      <div style="text-align:center;margin-bottom:14px">
-        <div style="font-size:48px;font-weight:800;color:var(--amber);font-family:'Oswald',sans-serif" id="nb-score">0<span style="font-size:20px;color:var(--text3)">점</span></div>
-        <div style="font-size:12px;color:var(--text3)" id="nb-streak">streak: 0</div>
-      </div>
-      <div style="height:5px;background:var(--bg3);border-radius:10px;overflow:hidden;margin-bottom:16px"><div id="nb-timerbar" style="height:100%;width:100%;background:var(--amber);border-radius:10px"></div></div>
-      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:22px 16px;text-align:center;margin-bottom:14px">
-        <div style="font-size:32px;color:var(--text)" id="nb-word"></div>
-        <div style="font-size:14px;color:var(--purple);font-weight:500;margin-top:4px" id="nb-phon"></div>
-      </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px" id="nb-opts"></div>
-      <div style="font-size:13px;color:var(--text3);text-align:center;margin-top:10px" id="nb-status"></div>
-    </div>
-
-    <!-- GAME: Suneung Mock Exam -->
-    <div id="game-suneung" style="display:none;min-height:80vh;flex-direction:column;justify-content:center">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-        <div style="font-size:14px;font-weight:600;color:var(--text)">📝 수능 모의고사</div>
-        <button onclick="backToGames()" style="padding:5px 10px;border-radius:20px;border:1px solid var(--border2);background:transparent;color:var(--text3);cursor:pointer;font-size:12px;font-family:inherit">← Back</button>
-      </div>
-      <div id="sn-intro" style="text-align:center;padding:20px 10px">
-        <div style="font-size:15px;color:var(--text2);line-height:1.7;margin-bottom:18px">전국이 숨죽이는 순간.<br>25 questions. Every level. No safety net.<br>Your result is graded 1st–9th 등급, just like the real exam.</div>
-        <button onclick="startSuneung()" style="width:100%;padding:15px;border-radius:var(--rsm);border:none;background:linear-gradient(135deg,#8F1A1A,#3D6BC4);color:#fff;cursor:pointer;font-size:15px;font-family:inherit;font-weight:700">Begin exam →</button>
-      </div>
-      <div id="sn-quiz" style="display:none">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-          <div style="font-size:12px;color:var(--text3)" id="sn-progress">Question 1 of 25</div>
-          <div style="font-size:12px;font-weight:600;color:var(--text)" id="sn-scoretop">0 / 25</div>
-        </div>
-        <div style="height:5px;background:var(--bg3);border-radius:10px;overflow:hidden;margin-bottom:16px"><div id="sn-bar" style="height:100%;width:0%;background:#8F1A1A;border-radius:10px;transition:width .3s"></div></div>
-        <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:22px 16px;text-align:center;margin-bottom:14px">
-          <div style="font-size:32px;color:var(--text)" id="sn-word"></div>
-          <div style="font-size:14px;color:var(--purple);font-weight:500;margin-top:4px" id="sn-phon"></div>
-        </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px" id="sn-opts"></div>
-        <div style="font-size:15px;font-weight:600;text-align:center;min-height:22px;margin-bottom:8px" id="sn-result"></div>
-        <button id="sn-next" class="q-next-btn" disabled style="opacity:.3" onclick="nextSuneung()">Next →</button>
-      </div>
-      <div id="sn-done" style="display:none;text-align:center;padding:20px 10px"></div>
     </div>
 
   </div>

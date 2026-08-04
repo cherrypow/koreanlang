@@ -16,19 +16,35 @@ JapanLang's current (much more iterated) production app — see note at the bott
 | 0.2 | 294 master vocabulary words across 5 levels and 9 categories (incl. `particles`) | ✅ Done |
 | 0.3 | 3 quiz modes per level (Translation, Phonetics, Word Match), 7/10 to pass | ✅ Done |
 | 0.4 | GrowKOR sentence-builder engine, 7 themed pools (~30 words each) | ✅ Done |
-| 0.5 | 10 games: Sentence Builder, Opposite Game (40 pairs), Conversation Fill (15), Word Match, Flashcards, Delivery Boxes, Tteokbokki Cart, Transfer, Noraebang 100, Suneung Mock Exam | ✅ Done |
+| 0.5 | 5 Games-tab games (Sentence Builder, Opposite Game 40 pairs, Conversation Fill 15, Word Match, Flashcards) + 5 level-specific Test-3 mini-games gating the Quiz (see below) | ✅ Done |
 | 0.6 | Word Bank (294 words, 9 categories) + Phrase Bank (100 phrases, 10 categories), word-tap modal with example sentence + illustration | ✅ Done |
 | 0.7 | XP / streak / level-unlock persistence via localStorage | ✅ Done |
 | 0.8 | Web Audio sound effects (tap/correct/wrong/level-up/victory/fail), no audio assets needed | ✅ Done |
 | 0.9 | Repo pushed to `github.com/cherrypow/koreanlang` (`main`) | ✅ Done |
 | 0.10 | Mascot (hanbok character, taegeuk hairpin) wired into splash + home hero; 5-tap dev mode | ✅ Done |
 
-### Korean-themed games added 2026-08-04 (all CSS-transition based, no animation library)
-- **Delivery Boxes** — reflex sort into 2 bins, endless rounds
-- **Tteokbokki Cart** — falling-word catch (CSS `top` transition), 3 bowls, ~4.2s per drop
-- **Transfer** (환승) — subway-line reskin of the Sentence Builder mechanic; train icon advances station-to-station as words are tapped in order
-- **Noraebang 100** (노래방 100) — speed round, streak-multiplier scoring race to a 100점 "perfect score"
-- **Suneung Mock Exam** (수능 모의고사) — capstone, locked until all 5 levels are passed (or dev mode); 25 questions pulled from every level at once, same-category distractors (near-synonyms) for real difficulty, graded 1st–9th 등급 like the actual exam
+### Test 3 — level-specific mini-games (corrected 2026-08-04)
+**These are NOT Games-tab entries.** A HardScan re-check of ManLang/JapanLang found that
+Test 3 of every level's Quiz is gated by one distinct arcade mini-game per level — never a
+generic multiple-choice mode, never a standalone Games entry (see `langapp_launch_process.md`
+for the full pattern and source references). KoreanLang's 5 games were relocated from the
+Games tab into `#sec-quiz` and rewired as each level's Test 3, dispatched by
+`startQuizMode3(lv)`:
+
+| Level | Game | Win condition | Lose condition |
+|---|---|---|---|
+| 1 | Delivery Boxes (택배 상자) | 8 correct bin-sorts | 3 wrong |
+| 2 | Tteokbokki Cart (떡볶이 포장마차) | 6 caught skewers | 3 missed |
+| 3 | Transfer (환승) | 3 completed sentences | 3 wrong tile taps |
+| 4 | Noraebang 100 (노래방 100) | reach 100점 | 3 misses |
+| 5 | Suneung Mock Exam (수능 모의고사) | 7 correct (same-category distractors) | 5 wrong |
+
+Every game is strike-based (survive until the win target, one miss too many = instant
+"Try again"), all timers route through `qgSetTimeout()` and are cleared by
+`stopAllQuizGameTimers()` on any navigation away from Quiz (fixes an earlier bug where
+falling-word/round timers kept firing sound effects after leaving the section). Each game
+opens on a static SVG scene built from the same `gs*` actor/prop library used for grammar
+illustrations, for visual consistency with the rest of the app.
 
 ---
 
