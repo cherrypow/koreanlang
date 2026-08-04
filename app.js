@@ -630,12 +630,18 @@ function renderHome(){
        (passed?'<div style="color:var(--green);flex-shrink:0">'+svgI('check',18)+'</div>':'')+
        '</div>';
   }
+  if(devMode){
+    h+='<div class="section-title" style="margin-top:6px">Dev — jump to quiz</div><div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px">';
+    for(var qi=1;qi<=5;qi++)h+='<button onclick="goToQuizLevel('+qi+')" style="padding:8px 14px;border-radius:20px;border:1px solid #8F1A1A;background:transparent;color:#C9333B;font-size:12px;font-family:inherit;cursor:pointer">Q'+qi+'</button>';
+    h+='</div>';
+  }
   root.innerHTML=h;
   document.getElementById('sec-home').style.visibility='visible';
   var splash=document.getElementById('splash-screen');
   if(splash){splash.style.opacity='0';setTimeout(function(){splash.style.display='none';},650);}
 }
 function countLevelsPassed(){var c=0;for(var i=1;i<=5;i++)if(levelPassed(i))c++;return c;}
+function goToQuizLevel(lv){quizLevel=lv;quizQueue=[];goTo('quiz');}
 function showLockToast(lv){showToast('Complete Level '+(lv-1)+' to unlock Level '+lv);}
 function showToast(msg){
   var old=document.getElementById('lock-toast');if(old)old.remove();
@@ -1006,7 +1012,7 @@ function renderQuizQuestion(){
     })(opts[i]);
   } else if(quizMode===2){ // Korean -> correct romanization
     qLabel.textContent='Choose the correct pronunciation';
-    qThai.textContent=item.t; qPhon.textContent='';
+    qThai.textContent=item.t; qPhon.textContent='('+item.e+')';
     for(var i=0;i<opts.length;i++)(function(o){
       var b=document.createElement('button'); b.className='qbtn'; b.textContent=o.p;
       b.onclick=function(){answerQuiz(o.p===item.p,b);}; optsEl.appendChild(b);
