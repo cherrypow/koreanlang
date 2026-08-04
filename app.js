@@ -45,11 +45,36 @@ function levelPassed(lv){
   return !!(q && q.mode1 && q.mode2 && q.mode3);
 }
 function isLevelUnlocked(lv){
+  if(devMode)return true;
   if(lv===1)return true;
   return levelPassed(lv-1);
 }
 var GROWKOR_UNLOCK={1:1,2:2,3:4};
 function isGrowKORLevelUnlocked(lv){ return isLevelUnlocked(GROWKOR_UNLOCK[lv]||1); }
+
+/* ---------- dev mode (5 taps on the mascot within 2s) ---------- */
+var devMode=false, devTapCount=0, devTapTimer=null;
+function devTap(){
+  devTapCount++;
+  if(devTapTimer)clearTimeout(devTapTimer);
+  devTapTimer=setTimeout(function(){devTapCount=0;},2000);
+  if(devTapCount<5)return;
+  devTapCount=0;
+  devMode=!devMode;
+  showToast(devMode?'Dev mode ON — all levels unlocked':'Dev mode OFF');
+  var qb=document.getElementById('dev-quiz-btn');
+  if(devMode&&!qb){
+    qb=document.createElement('button');
+    qb.id='dev-quiz-btn';
+    qb.style.cssText='position:fixed;bottom:80px;right:16px;background:#8F1A1A;color:#fff;padding:10px 16px;border-radius:20px;font-size:12px;font-weight:700;z-index:10000;cursor:pointer;font-family:inherit;border:none;box-shadow:0 2px 10px rgba(0,0,0,.4)';
+    qb.textContent='Quiz →';
+    qb.onclick=function(){goTo('quiz');};
+    document.body.appendChild(qb);
+  } else if(!devMode&&qb){
+    qb.remove();
+  }
+  if(curSec==='home')renderHome();
+}
 
 /* ---------- nav ---------- */
 var curSec='home';
@@ -580,7 +605,7 @@ function levelStatusText(lv){
 function renderHome(){
   bumpStreak();
   var root=document.getElementById('home-road');
-  var h='<div class="home-hero"><h2>한국어 KoreanLang</h2><p>Learn real, everyday Korean — five levels, from greetings to fluent reasoning.</p></div>';
+  var h='<div class="home-hero"><img src="'+MASCOT_IMG+'" alt="" onclick="devTap()" style="width:64px;height:64px;border-radius:50%;cursor:pointer;margin-bottom:8px"><h2>한국어 KoreanLang</h2><p>Learn real, everyday Korean — five levels, from greetings to fluent reasoning.</p></div>';
   h+='<div class="stats-row">'+
      '<div class="stat-card"><div class="sv" style="color:var(--purple)">'+svgI('zap',16)+' '+xp+'</div><div class="sl">XP</div></div>'+
      '<div class="stat-card"><div class="sv" style="color:var(--amber)">'+streak+'🔥</div><div class="sl">Day streak</div></div>'+
@@ -610,11 +635,12 @@ function renderHome(){
   if(splash){splash.style.opacity='0';setTimeout(function(){splash.style.display='none';},650);}
 }
 function countLevelsPassed(){var c=0;for(var i=1;i<=5;i++)if(levelPassed(i))c++;return c;}
-function showLockToast(lv){
+function showLockToast(lv){showToast('Complete Level '+(lv-1)+' to unlock Level '+lv);}
+function showToast(msg){
   var old=document.getElementById('lock-toast');if(old)old.remove();
   var t=document.createElement('div');t.id='lock-toast';
   t.style.cssText='position:fixed;top:60px;left:50%;transform:translateX(-50%);background:var(--amber);color:#1a1200;padding:8px 18px;border-radius:20px;font-size:12px;font-weight:700;z-index:10000;font-family:inherit;pointer-events:none;animation:toastFade 2.1s forwards';
-  t.textContent='Complete Level '+(lv-1)+' to unlock Level '+lv;
+  t.textContent=msg;
   document.body.appendChild(t);
   t.addEventListener('animationend',function(){t.remove();});
 }
@@ -2022,10 +2048,103 @@ function closeFailure(){document.getElementById('failure-overlay').style.display
 function closeModal(){document.getElementById('modal-bg').classList.remove('open');}
 function openModal(html){document.getElementById('modal-body').innerHTML=html;document.getElementById('modal-bg').classList.add('open');}
 
+/* ---------- Hangul particle helpers (final-consonant / batchim check) ---------- */
+function hasBatchim(s){
+  var c=s.charCodeAt(s.length-1)-0xAC00;
+  if(c<0||c>11171)return false;
+  return (c%28)!==0;
+}
+function topicP(w){return hasBatchim(w)?{t:'은',p:'eun'}:{t:'는',p:'neun'};}
+function objP(w){return hasBatchim(w)?{t:'을',p:'eul'}:{t:'를',p:'reul'};}
+
+/* ---------- curated examples for idiomatic words a template can't safely cover ---------- */
+var BANK_EXTRA_EXAMPLES={
+  '에서':{thai:'학교에서 공부해요',phon:'hakgyoeseo gongbuhaeyo',eng:'I study at school',words:[{t:'학교',p:'hakgyo',e:'school',c:'wc-o'},{t:'에서',p:'eseo',e:'at',c:'wc-p'},{t:'공부해요',p:'gongbuhaeyo',e:'study',c:'wc-v'}]},
+  '도':{thai:'저도 가요',phon:'jeodo gayo',eng:'I go too',words:[{t:'저',p:'jeo',e:'I',c:'wc-s'},{t:'도',p:'do',e:'also',c:'wc-p'},{t:'가요',p:'gayo',e:'go',c:'wc-v'}]},
+  '만':{thai:'이것만 있어요',phon:'igeotman isseoyo',eng:'I only have this',words:[{t:'이것',p:'igeot',e:'this',c:'wc-o'},{t:'만',p:'man',e:'only',c:'wc-p'},{t:'있어요',p:'isseoyo',e:'have',c:'wc-v'}]},
+  '과':{thai:'밥과 물',phon:'bapgwa mul',eng:'rice and water',words:[{t:'밥',p:'bap',e:'rice',c:'wc-o'},{t:'과',p:'gwa',e:'and',c:'wc-p'},{t:'물',p:'mul',e:'water',c:'wc-o'}]},
+  '와':{thai:'커피와 차',phon:'keopiwa cha',eng:'coffee and tea',words:[{t:'커피',p:'keopi',e:'coffee',c:'wc-o'},{t:'와',p:'wa',e:'and',c:'wc-p'},{t:'차',p:'cha',e:'tea',c:'wc-o'}]},
+  '한테':{thai:'친구한테 말해요',phon:'chinguhante malhaeyo',eng:'I tell my friend',words:[{t:'친구',p:'chingu',e:'friend',c:'wc-o'},{t:'한테',p:'hante',e:'to',c:'wc-p'},{t:'말해요',p:'malhaeyo',e:'tell',c:'wc-v'}]},
+  '께':{thai:'선생님께 드려요',phon:'seonsaengnimkke deuryeoyo',eng:'I give it to the teacher (honorific)',words:[{t:'선생님',p:'seonsaengnim',e:'teacher',c:'wc-o'},{t:'께',p:'kke',e:'to (honorific)',c:'wc-p'},{t:'드려요',p:'deuryeoyo',e:'give (honorific)',c:'wc-v'}]},
+  '로':{thai:'학교로 가요',phon:'hakgyoro gayo',eng:'I go to school',words:[{t:'학교',p:'hakgyo',e:'school',c:'wc-o'},{t:'로',p:'ro',e:'toward',c:'wc-p'},{t:'가요',p:'gayo',e:'go',c:'wc-v'}]},
+  '으로':{thai:'손으로 써요',phon:'soneuro sseoyo',eng:'I write by hand',words:[{t:'손',p:'son',e:'hand',c:'wc-o'},{t:'으로',p:'euro',e:'by',c:'wc-p'},{t:'써요',p:'sseoyo',e:'write',c:'wc-v'}]},
+  '까지':{thai:'여기까지 가요',phon:'yeogikkaji gayo',eng:'I go up to here',words:[{t:'여기',p:'yeogi',e:'here',c:'wc-o'},{t:'까지',p:'kkaji',e:'until',c:'wc-p'},{t:'가요',p:'gayo',e:'go',c:'wc-v'}]},
+  '누구':{thai:'저 사람은 누구예요?',phon:'jeo sarameun nuguyeyo?',eng:'Who is that person?',words:[{t:'저 사람',p:'jeo saram',e:'that person',c:'wc-s'},{t:'은',p:'eun',e:'(topic)',c:'wc-p'},{t:'누구예요?',p:'nuguyeyo?',e:'who is it?',c:'wc-q'}]},
+  '언제':{thai:'언제 가요?',phon:'eonje gayo?',eng:'When are you going?',words:[{t:'언제',p:'eonje',e:'when',c:'wc-q'},{t:'가요?',p:'gayo?',e:'go?',c:'wc-v'}]},
+  '왜':{thai:'왜 안 가요?',phon:'wae an gayo?',eng:'Why aren’t you going?',words:[{t:'왜',p:'wae',e:'why',c:'wc-q'},{t:'안',p:'an',e:'not',c:'wc-n'},{t:'가요?',p:'gayo?',e:'go?',c:'wc-v'}]},
+  '어떻게':{thai:'어떻게 가요?',phon:'eotteoke gayo?',eng:'How do I get there?',words:[{t:'어떻게',p:'eotteoke',e:'how',c:'wc-q'},{t:'가요?',p:'gayo?',e:'go?',c:'wc-v'}]},
+  '얼마나':{thai:'얼마나 걸려요?',phon:'eolmana geollyeoyo?',eng:'How long does it take?',words:[{t:'얼마나',p:'eolmana',e:'how long',c:'wc-q'},{t:'걸려요?',p:'geollyeoyo?',e:'does it take?',c:'wc-v'}]},
+  '몇':{thai:'사과 몇 개예요?',phon:'sagwa myeot gaeyeyo?',eng:'How many apples?',words:[{t:'사과',p:'sagwa',e:'apple',c:'wc-o'},{t:'몇',p:'myeot',e:'how many',c:'wc-q'},{t:'개예요?',p:'gaeyeyo?',e:'items?',c:'wc-q'}]},
+  '어느':{thai:'어느 나라예요?',phon:'eoneu narayeyo?',eng:'Which country is it?',words:[{t:'어느',p:'eoneu',e:'which',c:'wc-q'},{t:'나라예요?',p:'narayeyo?',e:'country?',c:'wc-q'}]},
+  '무엇':{thai:'이것은 무엇입니까?',phon:'igeoseun mueotimnikka?',eng:'What is this? (formal)',words:[{t:'이것',p:'igeot',e:'this',c:'wc-s'},{t:'은',p:'eun',e:'(topic)',c:'wc-p'},{t:'무엇입니까?',p:'mueotimnikka?',e:'what is it?',c:'wc-q'}]},
+  '어느 것':{thai:'어느 것이 좋아요?',phon:'eoneu geosi joayo?',eng:'Which one is good?',words:[{t:'어느 것',p:'eoneu geot',e:'which one',c:'wc-q'},{t:'이',p:'i',e:'(subject)',c:'wc-p'},{t:'좋아요?',p:'joayo?',e:'is good?',c:'wc-a'}]},
+  '얼마':{thai:'이거 얼마예요?',phon:'igeo eolmayeyo?',eng:'How much is this?',words:[{t:'이거',p:'igeo',e:'this',c:'wc-s'},{t:'얼마예요?',p:'eolmayeyo?',e:'how much?',c:'wc-q'}]},
+  '몇 시':{thai:'지금 몇 시예요?',phon:'jigeum myeot siyeyo?',eng:'What time is it now?',words:[{t:'지금',p:'jigeum',e:'now',c:'wc-t'},{t:'몇 시예요?',p:'myeot siyeyo?',e:'what time?',c:'wc-q'}]},
+  '며칠':{thai:'오늘 며칠이에요?',phon:'oneul myeochirieyo?',eng:'What’s the date today?',words:[{t:'오늘',p:'oneul',e:'today',c:'wc-t'},{t:'며칠이에요?',p:'myeochirieyo?',e:'what date?',c:'wc-q'}]},
+  '얼마 동안':{thai:'얼마 동안 있어요?',phon:'eolma dongan isseoyo?',eng:'How long will you stay?',words:[{t:'얼마 동안',p:'eolma dongan',e:'for how long',c:'wc-q'},{t:'있어요?',p:'isseoyo?',e:'stay?',c:'wc-v'}]},
+  '그래서':{thai:'바빠요. 그래서 못 가요.',phon:'bappayo. geuraeseo mot gayo.',eng:'I’m busy. So I can’t go.',words:[{t:'바빠요',p:'bappayo',e:'busy',c:'wc-a'},{t:'그래서',p:'geuraeseo',e:'so',c:'wc-p'},{t:'못 가요',p:'mot gayo',e:'can’t go',c:'wc-n'}]},
+  '하지만':{thai:'비싸요. 하지만 사요.',phon:'bissayo. hajiman sayo.',eng:'It’s expensive. But I’ll buy it.',words:[{t:'비싸요',p:'bissayo',e:'expensive',c:'wc-a'},{t:'하지만',p:'hajiman',e:'but',c:'wc-p'},{t:'사요',p:'sayo',e:'buy',c:'wc-v'}]},
+  '그리고':{thai:'밥을 먹어요. 그리고 커피를 마셔요.',phon:'babeul meogeoyo. geurigo keopireul masyeoyo.',eng:'I eat rice. And I drink coffee.',words:[{t:'밥을 먹어요',p:'babeul meogeoyo',e:'eat rice',c:'wc-v'},{t:'그리고',p:'geurigo',e:'and',c:'wc-p'},{t:'커피를 마셔요',p:'keopireul masyeoyo',e:'drink coffee',c:'wc-v'}]},
+  '왜냐하면':{thai:'안 가요. 왜냐하면 바빠요.',phon:'an gayo. waenyahamyeon bappayo.',eng:'I’m not going. Because I’m busy.',words:[{t:'안 가요',p:'an gayo',e:'not go',c:'wc-n'},{t:'왜냐하면',p:'waenyahamyeon',e:'because',c:'wc-p'},{t:'바빠요',p:'bappayo',e:'busy',c:'wc-a'}]},
+  '그런데':{thai:'맛있어요. 그런데 비싸요.',phon:'masisseoyo. geureonde bissayo.',eng:'It’s tasty. However, it’s expensive.',words:[{t:'맛있어요',p:'masisseoyo',e:'tasty',c:'wc-a'},{t:'그런데',p:'geureonde',e:'however',c:'wc-p'},{t:'비싸요',p:'bissayo',e:'expensive',c:'wc-a'}]},
+  '따라서':{thai:'시간이 없어요. 따라서 못 가요.',phon:'sigani eopseoyo. ttaraseo mot gayo.',eng:'There’s no time. Therefore I can’t go.',words:[{t:'시간이 없어요',p:'sigani eopseoyo',e:'no time',c:'wc-n'},{t:'따라서',p:'ttaraseo',e:'therefore',c:'wc-p'},{t:'못 가요',p:'mot gayo',e:'can’t go',c:'wc-n'}]},
+  '예를 들면':{thai:'과일을 좋아해요. 예를 들면 사과예요.',phon:'gwaireul joahaeyo. yereul deulmyeon sagwayeyo.',eng:'I like fruit. For example, apples.',words:[{t:'과일을 좋아해요',p:'gwaireul joahaeyo',e:'like fruit',c:'wc-v'},{t:'예를 들면',p:'yereul deulmyeon',e:'for example',c:'wc-p'},{t:'사과예요',p:'sagwayeyo',e:'is apples',c:'wc-v'}]},
+  '반면에':{thai:'그는 커요. 반면에 저는 작아요.',phon:'geuneun keoyo. banmyeone jeoneun jagayo.',eng:'He is big. On the other hand, I am small.',words:[{t:'그는 커요',p:'geuneun keoyo',e:'he is big',c:'wc-a'},{t:'반면에',p:'banmyeone',e:'on the other hand',c:'wc-p'},{t:'저는 작아요',p:'jeoneun jagayo',e:'I am small',c:'wc-a'}]},
+  '만약':{thai:'만약 비가 오면 집에 있어요',phon:'manyak biga omyeon jibe isseoyo',eng:'If it rains, I’ll stay home',words:[{t:'만약',p:'manyak',e:'if',c:'wc-p'},{t:'비가 오면',p:'biga omyeon',e:'if it rains',c:'wc-v'},{t:'집에 있어요',p:'jibe isseoyo',e:'stay home',c:'wc-v'}]},
+  '결국':{thai:'결국 집에 갔어요',phon:'gyeolguk jibe gasseoyo',eng:'In the end, I went home',words:[{t:'결국',p:'gyeolguk',e:'in the end',c:'wc-p'},{t:'집에 갔어요',p:'jibe gasseoyo',e:'went home',c:'wc-v'}]},
+  '그러면':{thai:'그러면 같이 가요',phon:'geureomyeon gachi gayo',eng:'Then let’s go together',words:[{t:'그러면',p:'geureomyeon',e:'then',c:'wc-p'},{t:'같이 가요',p:'gachi gayo',e:'go together',c:'wc-v'}]},
+  '그러나':{thai:'비싸요. 그러나 좋아요.',phon:'bissayo. geureona joayo.',eng:'It’s expensive. But it’s good.',words:[{t:'비싸요',p:'bissayo',e:'expensive',c:'wc-a'},{t:'그러나',p:'geureona',e:'but',c:'wc-p'},{t:'좋아요',p:'joayo',e:'good',c:'wc-a'}]},
+  '또는':{thai:'커피 또는 차를 마셔요',phon:'keopi ttoneun chareul masyeoyo',eng:'I drink coffee or tea',words:[{t:'커피',p:'keopi',e:'coffee',c:'wc-o'},{t:'또는',p:'ttoneun',e:'or',c:'wc-p'},{t:'차를 마셔요',p:'chareul masyeoyo',e:'drink tea',c:'wc-v'}]},
+  '혹은':{thai:'집 혹은 회사에 있어요',phon:'jip hogeun hoesae isseoyo',eng:'I’m at home or at the office',words:[{t:'집',p:'jip',e:'home',c:'wc-o'},{t:'혹은',p:'hogeun',e:'or else',c:'wc-p'},{t:'회사에 있어요',p:'hoesae isseoyo',e:'at the office',c:'wc-v'}]},
+  '게다가':{thai:'맛있어요. 게다가 싸요.',phon:'masisseoyo. gedaga ssayo.',eng:'It’s delicious. Moreover, it’s cheap.',words:[{t:'맛있어요',p:'masisseoyo',e:'delicious',c:'wc-a'},{t:'게다가',p:'gedaga',e:'moreover',c:'wc-p'},{t:'싸요',p:'ssayo',e:'cheap',c:'wc-a'}]},
+  '그래도':{thai:'바빠요. 그래도 가요.',phon:'bappayo. geuraedo gayo.',eng:'I’m busy. Even so, I’ll go.',words:[{t:'바빠요',p:'bappayo',e:'busy',c:'wc-a'},{t:'그래도',p:'geuraedo',e:'even so',c:'wc-p'},{t:'가요',p:'gayo',e:'go',c:'wc-v'}]},
+  '대신에':{thai:'커피 대신에 차를 마셔요',phon:'keopi daesine chareul masyeoyo',eng:'I drink tea instead of coffee',words:[{t:'커피',p:'keopi',e:'coffee',c:'wc-o'},{t:'대신에',p:'daesine',e:'instead of',c:'wc-p'},{t:'차를 마셔요',p:'chareul masyeoyo',e:'drink tea',c:'wc-v'}]},
+  '동안':{thai:'회의 동안 조용히 하세요',phon:'hoeui dongan joyonghi haseyo',eng:'Please be quiet during the meeting',words:[{t:'회의',p:'hoeui',e:'meeting',c:'wc-o'},{t:'동안',p:'dongan',e:'during',c:'wc-p'},{t:'조용히 하세요',p:'joyonghi haseyo',e:'be quiet',c:'wc-v'}]},
+};
+
+/* ---------- templated example generator for the remaining categories ---------- */
+function genBankExample(v){
+  var tp,op;
+  switch(v.cat){
+    case 'nouns':
+      op=objP(v.t);
+      return {thai:'저는 '+v.t+op.t+' 좋아해요',phon:'jeoneun '+v.p+' '+op.p+' joahaeyo',eng:'I like '+v.e,
+        words:[{t:'저',p:'jeo',e:'I',c:'wc-s'},{t:'는',p:'neun',e:'(topic)',c:'wc-p'},{t:v.t,p:v.p,e:v.e,c:'wc-o'},{t:op.t,p:op.p,e:'(object)',c:'wc-p'},{t:'좋아해요',p:'joahaeyo',e:'like',c:'wc-v'}]};
+    case 'verbs':
+      return {thai:'저는 '+v.t,phon:'jeoneun '+v.p,eng:'I '+v.e.replace(/^(to )/,''),
+        words:[{t:'저',p:'jeo',e:'I',c:'wc-s'},{t:'는',p:'neun',e:'(topic)',c:'wc-p'},{t:v.t,p:v.p,e:v.e,c:'wc-v'}]};
+    case 'descriptors':
+      return {thai:'이것은 '+v.t,phon:'igeoseun '+v.p,eng:'This is '+v.e,
+        words:[{t:'이것',p:'igeot',e:'this',c:'wc-s'},{t:'은',p:'eun',e:'(topic)',c:'wc-p'},{t:v.t,p:v.p,e:v.e,c:'wc-a'}]};
+    case 'feelings':
+      return {thai:'저는 '+v.t,phon:'jeoneun '+v.p,eng:'I feel '+v.e,
+        words:[{t:'저',p:'jeo',e:'I',c:'wc-s'},{t:'는',p:'neun',e:'(topic)',c:'wc-p'},{t:v.t,p:v.p,e:v.e,c:'wc-a'}]};
+    case 'modals':
+      return {thai:'저는 '+v.t,phon:'jeoneun '+v.p,eng:'I '+v.e,
+        words:[{t:'저',p:'jeo',e:'I',c:'wc-s'},{t:'는',p:'neun',e:'(topic)',c:'wc-p'},{t:v.t,p:v.p,e:v.e,c:'wc-v'}]};
+    case 'time':
+      return {thai:v.t+', 만나요!',phon:v.p+', mannayo!',eng:(v.e.charAt(0).toUpperCase()+v.e.slice(1))+', let’s meet!',
+        words:[{t:v.t,p:v.p,e:v.e,c:'wc-t'},{t:'만나요',p:'mannayo',e:'let’s meet',c:'wc-v'}]};
+    default: return null;
+  }
+}
+/* ---------- generic scene per category, for words with no hand-illustrated example ---------- */
+function genScene(cat){
+  var m={
+    nouns:gsWrap('#1a1035',gsActor(60,'#C9333B')+gsHeart(140,60,'#e84030')),
+    verbs:gsWrap('#16213a',gsActor(60,'#3a7a3a')+gsArrow(95,80,155,80)),
+    descriptors:gsWrap('#1a1035',gsStar(100,60,20)+gsStar(140,90,10)),
+    feelings:gsWrap('#1a1035',gsActor(100,'#d8709a')+gsHeart(150,55,'#e84030')),
+    modals:gsWrap('#1a1035',gsActor(60,'#3D6BC4')+gsCheck(150,60)),
+    time:gsWrap('#1a1a4a',gsClock(100,75)),
+  };
+  return m[cat]||'';
+}
+
 /* ---------- word-tap example-sentence modal ---------- */
 function openWordModal(v){
   playTap();
-  var found=null;
+  var found=null,foundImg=null;
   for(var i=0;i<grammarLevels.length&&!found;i++){
     var pats=grammarLevels[i].patterns;
     for(var p=0;p<pats.length&&!found;p++){
@@ -2035,6 +2154,15 @@ function openWordModal(v){
       }
     }
   }
+  if(found){
+    foundImg=GRAMMAR_IMGS[found.phon]||'';
+  } else if(BANK_EXTRA_EXAMPLES[v.t]){
+    found=BANK_EXTRA_EXAMPLES[v.t];
+    foundImg='';
+  } else if(v.cat&&genBankExample(v)){
+    found=genBankExample(v);
+    foundImg=genScene(v.cat);
+  }
   var h='<div style="display:flex;align-items:center;gap:10px;margin-bottom:4px">'+
     '<div style="font-size:32px;font-weight:500">'+v.t+'</div>'+
     '<button onclick="speakKorean(\''+v.t.replace(/'/g,"\\'")+'\')" style="background:var(--purple-bg);border:1.5px solid var(--purple-dim);cursor:pointer;padding:6px 12px;border-radius:20px;color:var(--purple);display:flex;align-items:center">'+svgI('speaker',14)+'</button>'+
@@ -2043,7 +2171,7 @@ function openWordModal(v){
     '<div style="font-size:14px;color:var(--text2);margin-bottom:14px">'+v.e+'</div>';
   if(found){
     h+='<div style="font-size:11px;font-weight:700;color:var(--purple);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">EXAMPLE SENTENCE</div>';
-    if(GRAMMAR_IMGS[found.phon])h+=GRAMMAR_IMGS[found.phon];
+    if(foundImg)h+=foundImg;
     h+='<div class="card-sm"><div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">'+
        '<div class="s-thai" style="flex:1;margin-bottom:0">'+found.thai+'</div>'+
        '<button onclick="speakKorean(\''+found.thai.replace(/'/g,"\\'")+'\')" style="background:var(--purple-bg);border:1.5px solid var(--purple-dim);cursor:pointer;padding:4px 10px;border-radius:20px;color:var(--purple);flex-shrink:0;display:flex;align-items:center">'+svgI('speaker',14)+'</button></div>'+
@@ -2088,6 +2216,7 @@ function nextOnboard(){
 
 function initApp(){
   loadState();
+  var sm=document.getElementById('splash-mascot');if(sm)sm.src=MASCOT_IMG;
   goTo('home');
   renderGrammarLesson(1);
   try{
