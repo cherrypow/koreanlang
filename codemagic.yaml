@@ -1,0 +1,123 @@
+workflows:
+  ios-release:
+    name: iOS Release
+    max_build_duration: 60
+    instance_type: mac_mini_m2
+    environment:
+      groups:
+        - "AppKoreanLang"
+      vars:
+        BUNDLE_ID: "com.cherrypow.koreanlang"
+      xcode: latest
+      cocoapods: default
+    scripts:
+      - name: Install dependencies
+        script: |
+          npm install
+      - name: Build web assets
+        script: |
+          mkdir -p www
+          npm run build
+      - name: Sync Capacitor
+        script: |
+          chmod +x node_modules/.bin/cap
+          npx cap sync ios
+      - name: Set up code signing
+        script: |
+          export APP_STORE_CONNECT_PRIVATE_KEY="$(echo "$APP_STORE_CONNECT_PRIVATE_KEY_BASE64" | base64 --decode)"
+
+          keychain initialize
+
+          openssl genrsa -out /tmp/cert_key.pem 2048
+
+          app-store-connect certificates list --type DISTRIBUTION --json > /tmp/certs.json 2>/dev/null || true
+          for cert_id in $(python3 -c "import json; [print(c['id']) for c in json.load(open('/tmp/certs.json'))]" 2>/dev/null); do
+            echo "Deleting certificate $cert_id"
+            app-store-connect certificates delete "$cert_id" 2>&1 || true
+          done
+
+          app-store-connect fetch-signing-files "$BUNDLE_ID" \
+            --type IOS_APP_STORE \
+            --create \
+            --certificate-key "$(cat /tmp/cert_key.pem)"
+
+          keychain add-certificates
+
+          PROFILE_PATH=$(ls ~/Library/MobileDevice/Provisioning\ Profiles/*.mobileprovision 2>/dev/null | head -1)
+          if [ -z "$PROFILE_PATH" ]; then
+            PROFILE_PATH=$(ls ~/Library/Developer/Xcode/UserData/Provisioning\ Profiles/*.mobileprovision 2>/dev/null | head -1)
+          fi
+
+          if [ -z "$PROFILE_PATH" ]; then
+            echo "ERROR: No provisioning profile found!"
+            exit 1
+          fi
+
+          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles/
+          cp -n "$PROFILE_PATH" ~/Library/MobileDevice/Provisioning\ Profiles/ 2>/dev/null || true
+
+          PROFILE_UUID=$(/usr/libexec/PlistBuddy -c "Print UUID" /dev/stdin <<< $(/usr/bin/security cms -D -i "$PROFILE_PATH"))
+          echo "Profile UUID: $PROFILE_UUID"
+
+          cp "$PROFILE_PATH" ~/Library/MobileDevice/Provisioning\ Profiles/"$PROFILE_UUID".mobileprovision 2>/dev/null || true
+
+          echo "PROFILE_UUID=$PROFILE_UUID" >> $CM_ENV
+
+          PBXPROJ="ios/App/App.xcodeproj/project.pbxproj"
+          sed -i '' 's/CODE_SIGN_STYLE = Automatic/CODE_SIGN_STYLE = Manual/g' "$PBXPROJ"
+          sed -i '' 's/ProvisioningStyle = Automatic/ProvisioningStyle = Manual/g' "$PBXPROJ"
+          echo "Done setting up code signing"
+      - name: Set build number
+        script: |
+          cd ios/App
+          BUILD_NUM=$(date +%s)
+          echo "Setting build number to $BUILD_NUM"
+          agvtool new-version -all "$BUILD_NUM"
+      - name: Build iOS
+        script: |
+          xcodebuild -project ios/App/App.xcodeproj \
+            -scheme App \
+            -archivePath build/ios/App.xcarchive \
+            -destination 'generic/platform=iOS' \
+            archive \
+            CODE_SIGN_STYLE=Manual \
+            DEVELOPMENT_TEAM="799FH7B774" \
+            "CODE_SIGN_IDENTITY=Apple Distribution" \
+            "PROVISIONING_PROFILE=$PROFILE_UUID"
+      - name: Export IPA
+        script: |
+          cat > exportOptions.plist <<PLIST
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>method</key>
+            <string>app-store-connect</string>
+            <key>teamID</key>
+            <string>799FH7B774</string>
+            <key>signingStyle</key>
+            <string>manual</string>
+            <key>provisioningProfiles</key>
+            <dict>
+              <key>com.cherrypow.koreanlang</key>
+              <string>$PROFILE_UUID</string>
+            </dict>
+          </dict>
+          </plist>
+          PLIST
+          xcodebuild -exportArchive \
+            -archivePath build/ios/App.xcarchive \
+            -exportPath build/ios/ipa \
+            -exportOptionsPlist exportOptions.plist
+      - name: Upload to App Store Connect
+        script: |
+          export APP_STORE_CONNECT_PRIVATE_KEY="$(echo "$APP_STORE_CONNECT_PRIVATE_KEY_BASE64" | base64 --decode)"
+          app-store-connect publish \
+            --path build/ios/ipa/App.ipa \
+            --testflight \
+            --beta-group "External Testers" || app-store-connect publish \
+            --path build/ios/ipa/App.ipa || true
+          echo "Upload complete"
+    artifacts:
+      - build/ios/ipa/**/*.ipa
+      - /tmp/xcodebuild_logs/*.log

@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0a0e20">
+<title>KoreanLang</title>
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css?v=1">
+</head>
+<body>
+<!-- SPLASH SCREEN -->
+<div id="splash-screen" style="position:fixed;top:0;left:0;right:0;bottom:0;z-index:99999;background:#192038;display:flex;flex-direction:column;align-items:center;justify-content:center;transition:opacity .6s">
+  <svg width="120" height="120" viewBox="0 0 120 120" style="margin-bottom:14px">
+    <circle cx="60" cy="60" r="52" fill="#0d1025" stroke="#3a2a2a" stroke-width="1"/>
+    <path d="M60 16 a22 22 0 0 1 0 44 a22 22 0 0 0 0 44 a44 44 0 0 0 0 -88" fill="#C9333B"/>
+    <path d="M60 16 a22 22 0 0 0 0 44 a22 22 0 0 1 0 44 a44 44 0 0 1 0 -88" fill="#3D6BC4"/>
+  </svg>
+  <div style="font-family:'Oswald',sans-serif;font-size:26px;font-weight:600;color:#f0e8f2;letter-spacing:1px">KoreanLang</div>
+  <div style="margin-top:8px;height:2px;width:120px;background:linear-gradient(90deg,transparent,#C9333B,transparent);border-radius:1px"></div>
+  <div style="margin-top:20px;font-size:13px;color:#8a7a92;font-style:italic">잠시만 기다려 주세요...</div>
+</div>
+<div id="xp-label" style="display:none"></div><div id="xp-bar" style="display:none"></div>
+
+<div class="content">
+
+  <!-- HOME -->
+  <div id="sec-home" class="sec on" style="padding:0;visibility:hidden">
+    <div id="home-bg-wrap" style="flex:1;position:relative;overflow:hidden;background:linear-gradient(180deg,#1a1028 0%,#0d1025 55%,#0a0e20 100%)">
+      <div id="home-road" style="position:absolute;top:0;left:0;right:0;bottom:0;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:18px 16px 90px"></div>
+    </div>
+  </div>
+
+  <!-- GRAMMAR -->
+  <div id="sec-grammar" class="sec" style="background:radial-gradient(circle at 50% 0%,#1a1028,#0a0e20 70%)">
+    <div id="grammar-content"></div>
+  </div>
+
+  <!-- QUIZ -->
+  <div id="sec-quiz" class="sec" style="background:radial-gradient(circle at 50% 0%,#1a1028,#0a0e20 70%)">
+    <div style="margin-bottom:14px">
+      <button onclick="goTo('grammar')" style="padding:5px 10px;border-radius:20px;border:1px solid var(--border2);background:transparent;color:var(--text3);cursor:pointer;font-size:11px;font-family:inherit;margin-bottom:8px">&larr; Grammar</button>
+      <div style="text-align:center">
+        <div style="font-size:22px;font-weight:800;color:var(--text);letter-spacing:-.5px;margin-bottom:4px">Quiz</div>
+        <div style="font-size:14px;font-weight:600;color:var(--purple);margin-bottom:2px" id="q-lv-display">Level 1</div>
+        <div style="font-size:12px;color:var(--text3)" id="q-lv-hint">Complete all 3 tests to advance</div>
+      </div>
+    </div>
+    <div id="q-mode-checklist" style="display:flex;justify-content:center;gap:12px;margin-bottom:16px;flex-wrap:wrap"></div>
+    <div style="margin-bottom:14px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">
+        <div style="font-size:12px;color:var(--text3)" id="q-set-label">Question 1 of 10</div>
+        <div style="font-size:12px;font-weight:600;color:var(--text)" id="q-set-score">0 / 10</div>
+      </div>
+      <div style="height:6px;background:var(--bg3);border-radius:10px;overflow:hidden">
+        <div id="q-set-bar" style="height:100%;width:0%;background:var(--purple);border-radius:10px;transition:width .3s,background .3s"></div>
+      </div>
+      <div style="font-size:11px;color:var(--text3);text-align:right;margin-top:3px">Need 7/10 to pass</div>
+    </div>
+    <div class="q-card card">
+      <div style="position:relative;text-align:center;margin-bottom:14px">
+        <div class="q-label" id="q-label" style="margin-bottom:0">What does this mean?</div>
+      </div>
+      <div class="q-thai" id="q-thai" style="text-align:center;padding:0 40px"></div>
+      <div class="q-phon" id="q-phon" style="text-align:center"></div>
+    </div>
+    <div id="q-breakdown" style="display:none;margin-top:10px">
+      <div style="font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--text3);margin-bottom:6px">WORD BREAKDOWN</div>
+      <div class="word-row" id="q-word-row"></div>
+    </div>
+    <div class="q-opts" id="q-opts" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:12px 0"></div>
+    <div id="q-result" style="font-size:15px;font-weight:600;text-align:center;min-height:22px;margin:8px 0"></div>
+    <button id="q-next" class="q-next-btn" disabled style="opacity:0.3;cursor:not-allowed" onclick="nextQ()">Next &rarr;</button>
+  </div>
+
+  <!-- BANK -->
+  <div id="sec-bank" class="sec" style="background:radial-gradient(circle at 50% 0%,#1a1028,#0a0e20 70%)">
+    <div style="display:flex;gap:8px;margin-bottom:14px">
+      <button class="fbtn on" id="bank-tab-words" onclick="showBankTab('words')" style="flex:1;padding:12px 16px;font-size:14px;font-weight:700;text-align:center">📦 Word Bank</button>
+      <button class="fbtn" id="bank-tab-phrases" onclick="showBankTab('phrases')" style="flex:1;padding:12px 16px;font-size:14px;font-weight:700;text-align:center">💬 Phrases</button>
+    </div>
+    <div id="bank-words">
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+        <button class="shuffle-btn" onclick="shuffleBank()">⟳ Shuffle</button>
+        <button class="shuffle-btn" onclick="random10cat()">🎲 Random 10 (this)</button>
+        <button class="shuffle-btn" onclick="random10all()">🌐 Random 10 (all)</button>
+      </div>
+      <div class="frow" id="bank-cats"></div>
+      <div id="bank-grid"></div>
+    </div>
+    <div id="bank-phrases" style="display:none">
+      <div id="phrases-picker">
+        <div style="text-align:center;margin-bottom:20px">
+          <div style="font-size:22px;font-weight:800;color:var(--text)">Phrases</div>
+          <div style="font-size:13px;color:var(--text3);margin-top:4px">Essential Korean phrases</div>
+        </div>
+        <div id="phrases-cat-list"></div>
+      </div>
+      <div id="phrases-view" style="display:none">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
+          <button onclick="showPhrasesPicker()" style="padding:6px 14px;border-radius:20px;border:1px solid var(--border2);background:transparent;color:var(--text3);cursor:pointer;font-size:12px;font-family:inherit">&larr; Categories</button>
+          <div id="phrases-cat-title" style="font-size:16px;font-weight:700;color:var(--text);flex:1"></div>
+        </div>
+        <div id="phrases-list"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- GAMES -->
+  <div id="sec-games" class="sec" style="background:radial-gradient(circle at 50% 0%,#1a1028,#0a0e20 70%)">
+    <div id="game-picker">
+      <div style="font-size:16px;font-weight:700;color:var(--text);margin-bottom:6px">Korean Games</div>
+      <div style="font-size:13px;color:var(--text2);margin-bottom:18px">Choose a challenge</div>
+      <div id="game-list"></div>
+    </div>
+
+    <!-- GAME: Sentence Builder -->
+    <div id="game-builder" style="display:none;min-height:80vh;flex-direction:column;justify-content:center">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <div style="font-size:14px;font-weight:600;color:var(--text)">🧩 Sentence Builder</div>
+        <div style="display:flex;gap:6px;align-items:center">
+          <div class="lv-pill" id="gb-lv">Lv 1</div>
+          <button onclick="backToGames()" style="padding:5px 10px;border-radius:20px;border:1px solid var(--border2);background:transparent;color:var(--text3);cursor:pointer;font-size:12px;font-family:inherit">← Back</button>
+        </div>
+      </div>
+      <div style="font-size:13px;color:var(--text2);margin-bottom:10px;text-align:center" id="gb-prompt"></div>
+      <div id="gb-slots" style="display:flex;flex-wrap:wrap;gap:6px;min-height:56px;background:var(--bg3);border:2px dashed var(--border2);border-radius:var(--r);padding:10px 12px;margin-bottom:12px;align-items:center"></div>
+      <div id="gb-tiles" style="display:flex;flex-wrap:wrap;gap:7px;margin-bottom:14px"></div>
+      <div style="display:flex;gap:8px">
+        <button onclick="checkBuilder()" style="flex:1;padding:13px;border-radius:var(--rsm);border:1px solid var(--purple-dim);background:var(--purple-bg);color:var(--purple);cursor:pointer;font-size:14px;font-family:inherit;font-weight:600">Check ✓</button>
+        <button onclick="clearBuilder()" style="padding:13px 16px;border-radius:var(--rsm);border:1px solid var(--border);background:transparent;color:var(--text3);cursor:pointer;font-size:14px;font-family:inherit">Clear</button>
+      </div>
+      <div style="font-size:15px;font-weight:600;text-align:center;min-height:22px;margin-top:10px" id="gb-result"></div>
+      <button id="gb-next" style="display:none;width:100%;margin-top:10px;padding:13px;border-radius:var(--rsm);border:1px solid var(--border2);background:transparent;color:var(--text);cursor:pointer;font-size:15px;font-family:inherit;font-weight:600" onclick="nextBuilder()">Next sentence →</button>
+      <div style="margin-top:12px;font-size:12px;color:var(--text3);text-align:center" id="gb-score"></div>
+    </div>
+
+    <!-- GAME: Word Match -->
+    <div id="game-match" style="display:none;height:100%;flex-direction:column">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+        <div style="font-size:14px;font-weight:600;color:var(--text)">🎯 Word Match</div>
+        <div style="display:flex;gap:6px;align-items:center">
+          <div style="font-size:13px;font-weight:700;color:var(--amber)" id="match-timer">30</div>
+          <div class="lv-pill" id="match-lv">Lv 1</div>
+          <button onclick="backToGames()" style="padding:5px 10px;border-radius:20px;border:1px solid var(--border2);background:transparent;color:var(--text3);cursor:pointer;font-size:12px;font-family:inherit">← Back</button>
+        </div>
+      </div>
+      <div style="font-size:12px;color:var(--text2);text-align:center;margin-bottom:14px">Match Korean → English. Rounds grow!</div>
+      <div style="flex:1;display:flex;align-items:center;justify-content:center">
+        <div style="width:100%">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px" id="match-grid"></div>
+        </div>
+      </div>
+      <div style="font-size:15px;font-weight:600;text-align:center;min-height:22px;margin-bottom:8px" id="match-result"></div>
+      <div style="font-size:12px;color:var(--text3);text-align:center" id="match-score"></div>
+    </div>
+
+    <!-- GAME: Conversation Fill -->
+    <div id="game-convo" style="display:none;min-height:80vh;flex-direction:column;justify-content:center">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+        <div style="font-size:14px;font-weight:600;color:var(--text)">🗣 Conversation Fill</div>
+        <div style="display:flex;gap:6px;align-items:center">
+          <div class="lv-pill" id="convo-lv">Lv 1</div>
+          <button onclick="backToGames()" style="padding:5px 10px;border-radius:20px;border:1px solid var(--border2);background:transparent;color:var(--text3);cursor:pointer;font-size:12px;font-family:inherit">← Back</button>
+        </div>
+      </div>
+      <div style="font-size:12px;color:var(--text3);text-align:center;margin-bottom:14px">Complete the missing line in the conversation</div>
+      <div id="convo-lines" style="margin-bottom:14px"></div>
+      <div style="display:grid;grid-template-columns:1fr;gap:8px;margin-bottom:12px;max-height:38vh;overflow-y:auto;-webkit-overflow-scrolling:touch" id="convo-opts"></div>
+      <div style="font-size:15px;font-weight:600;text-align:center;min-height:22px;margin-bottom:8px" id="convo-result"></div>
+      <button id="convo-next" style="display:none;width:100%;padding:13px;border-radius:var(--rsm);border:1px solid var(--border2);background:transparent;color:var(--text);cursor:pointer;font-size:15px;font-family:inherit;font-weight:600" onclick="nextConvo()">Next →</button>
+      <div style="font-size:12px;color:var(--text3);text-align:center;margin-top:8px" id="convo-score"></div>
+    </div>
+
+    <!-- GAME: Flashcard Quiz -->
+    <div id="game-flash" style="display:none">
+      <div id="flash-picker">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+          <div style="font-size:14px;font-weight:600;color:var(--text)">⚡ Flashcard Quiz</div>
+          <button onclick="backToGames()" style="padding:5px 10px;border-radius:20px;border:1px solid var(--border2);background:transparent;color:var(--text3);cursor:pointer;font-size:12px;font-family:inherit">← Back</button>
+        </div>
+        <div style="font-size:13px;color:var(--text2);margin-bottom:16px;text-align:center">Choose a category to study</div>
+        <div id="flash-cat-list"></div>
+      </div>
+      <div id="flash-quiz" style="display:none">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+          <div style="font-size:14px;font-weight:600;color:var(--text)" id="flash-cat-name"></div>
+          <div style="display:flex;gap:8px">
+            <button onclick="newSet()" style="padding:6px 12px;border-radius:20px;border:1px solid var(--border2);background:transparent;color:var(--text3);cursor:pointer;font-size:12px;font-family:inherit">New set</button>
+            <button onclick="backToPicker()" style="padding:6px 12px;border-radius:20px;border:1px solid var(--border2);background:transparent;color:var(--text3);cursor:pointer;font-size:12px;font-family:inherit">← Back</button>
+          </div>
+        </div>
+        <div class="fc-prog-row">
+          <div style="font-size:14px;font-weight:600;color:var(--text)" id="fc-score-lbl">0 / 10</div>
+          <div style="font-size:12px;color:var(--text3)">Need 7 to advance</div>
+        </div>
+        <div class="fc-bar-wrap"><div class="fc-bar" id="fc-bar"></div></div>
+        <div class="fc-card">
+          <div style="font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);margin-bottom:16px">What does this mean?</div>
+          <div class="fc-word" id="fc-word"></div>
+          <div class="fc-phon" id="fc-phon"></div>
+        </div>
+        <div class="fc-opts" id="fc-opts"></div>
+        <div class="fc-result" id="fc-result"></div>
+        <button class="fc-next" id="fc-next" style="display:none" onclick="nextCard()">Next →</button>
+      </div>
+    </div>
+
+    <!-- GAME: Opposite Game -->
+    <div id="game-opposite" style="display:none;min-height:80vh;flex-direction:column;justify-content:center">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+        <div style="font-size:14px;font-weight:600;color:var(--text)">🃏 Opposite Game</div>
+        <div style="display:flex;gap:6px;align-items:center">
+          <div class="lv-pill" id="opp-lv">Lv 1</div>
+          <button onclick="backToGames()" style="padding:5px 10px;border-radius:20px;border:1px solid var(--border2);background:transparent;color:var(--text3);cursor:pointer;font-size:12px;font-family:inherit">← Back</button>
+        </div>
+      </div>
+      <div style="font-size:12px;color:var(--text2);text-align:center;margin-bottom:14px">Tap the opposite meaning</div>
+      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:24px 16px;text-align:center;margin-bottom:16px">
+        <div style="font-size:13px;color:var(--text3);margin-bottom:8px;text-transform:uppercase;letter-spacing:.06em">What is the opposite of…</div>
+        <div style="font-size:42px;color:var(--text);margin-bottom:6px" id="opp-word"></div>
+        <div style="font-size:16px;color:var(--purple);font-weight:500;margin-bottom:4px" id="opp-phon"></div>
+        <div style="font-size:14px;color:var(--text2)" id="opp-eng"></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px" id="opp-opts"></div>
+      <div style="font-size:15px;font-weight:600;text-align:center;min-height:22px;margin-bottom:8px" id="opp-result"></div>
+      <button id="opp-next" style="display:none;width:100%;padding:14px;border-radius:var(--rsm);border:none;background:linear-gradient(135deg,#8F1A1A,#3D6BC4);color:#fff;cursor:pointer;font-size:16px;font-family:inherit;font-weight:700" onclick="nextOpposite()">Next →</button>
+      <div style="font-size:12px;color:var(--text3);text-align:center;margin-top:8px" id="opp-score"></div>
+    </div>
+
+  </div>
+
+  <!-- GROWKOR -->
+  <div id="sec-growkor" class="sec" style="padding:0;display:none;background:radial-gradient(circle at 50% 0%,#1a1028,#0a0e20 70%)">
+    <div class="grt-top-bar">
+      <h1 class="grt-title">GrowKOR</h1>
+      <div class="grt-score" id="grt-score">0/0</div>
+    </div>
+    <div style="display:flex;flex-direction:column;align-items:center;gap:12px;padding:16px 16px 14px;border-bottom:1px solid #ffffff10;flex-shrink:0">
+      <div class="grt-mode-toggle">
+        <button class="grt-mode-btn on" id="grt-mode-free" onclick="grtSetMode('free')">Learn</button>
+        <button class="grt-mode-btn" id="grt-mode-game" onclick="grtSetMode('game')">Play</button>
+      </div>
+      <div class="grt-lv-select" id="grt-lv-select">
+        <button class="grt-lv-btn on" onclick="grtSetLevel(1)">1</button>
+        <button class="grt-lv-btn" onclick="grtSetLevel(2)">2</button>
+        <button class="grt-lv-btn" onclick="grtSetLevel(3)">3</button>
+      </div>
+    </div>
+    <div class="grt-sentence-bar" id="grt-sent-bar"><div id="grt-sent-display"></div><div class="grt-badge" id="grt-badge"></div></div>
+    <div class="grt-grow-area" id="grt-grow"></div>
+    <div class="grt-controls"><button class="grt-ctrl-btn primary" onclick="grtReset()" style="width:100%">New</button></div>
+  </div>
+
+</div><!-- /content -->
+
+<div class="bottom-nav">
+  <button class="nav-item on" onclick="goTo('home',this)">
+    <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+    Home
+  </button>
+  <button class="nav-item" onclick="goTo('games',this)">
+    <svg viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="15" rx="2"/><path d="M16 2l-4 5-4-5"/><line x1="12" y1="12" x2="12" y2="17"/><line x1="9.5" y1="14.5" x2="14.5" y2="14.5"/></svg>
+    Games
+  </button>
+  <button class="nav-item" onclick="goTo('growkor',this)">
+    <svg viewBox="0 0 24 24"><line x1="12" y1="22" x2="12" y2="8" stroke-width="2"/><line x1="12" y1="14" x2="6" y2="8"/><line x1="12" y1="11" x2="18" y2="5"/><line x1="6" y1="8" x2="3" y2="5"/><line x1="6" y1="8" x2="5" y2="3"/><line x1="18" y1="5" x2="21" y2="2"/><line x1="18" y1="5" x2="16" y2="2"/><circle cx="12" cy="8" r="2" fill="currentColor"/></svg>
+    GrowKOR
+  </button>
+  <button class="nav-item" onclick="goTo('bank',this)">
+    <svg viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/><line x1="8" y1="7" x2="16" y2="7"/><line x1="8" y1="11" x2="13" y2="11"/></svg>
+    Library
+  </button>
+</div>
+
+<!-- VERB MODAL -->
+<div class="modal-bg" id="modal-bg" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div id="modal-body"></div>
+    <button class="close-btn" onclick="closeModal()">Close</button>
+  </div>
+</div>
+
+<script src="assets.js"></script>
+<script src="korean_audio.js"></script>
+<script src="app.js"></script>
+
+<!-- VICTORY OVERLAY -->
+<div id="victory-overlay" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:9999;background:rgba(0,0,0,.6);align-items:center;justify-content:center;flex-direction:column" onclick="closeVictory()">
+  <div style="background:#fff;border-radius:20px;padding:14px 14px 20px;box-shadow:0 8px 40px rgba(0,0,0,.4);width:80vw;max-width:380px;text-align:center">
+    <div style="width:100%;border-radius:14px;overflow:hidden;margin-bottom:16px">
+      <div id="victory-img" style="width:100%;aspect-ratio:1;background-size:cover;background-position:center;background-repeat:no-repeat;border-radius:14px"></div>
+    </div>
+  </div>
+</div>
+
+<!-- FAILURE OVERLAY -->
+<div id="failure-overlay" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:9999;background:rgba(0,0,0,.6);align-items:center;justify-content:center;flex-direction:column" onclick="closeFailure()">
+  <div style="background:#fff;border-radius:20px;padding:14px 14px 20px;box-shadow:0 8px 40px rgba(0,0,0,.4);width:80vw;max-width:380px;text-align:center">
+    <div style="width:100%;border-radius:14px;overflow:hidden;margin-bottom:16px">
+      <div id="failure-img" style="width:100%;aspect-ratio:1;background-size:cover;background-position:center;background-repeat:no-repeat;border-radius:14px"></div>
+    </div>
+  </div>
+</div>
+<!-- ONBOARDING OVERLAY -->
+<div id="onboard-overlay" style="display:none;position:fixed;inset:0;z-index:10000;background:#0a0e20;flex-direction:column;align-items:center;justify-content:center;padding:24px">
+  <div style="max-width:340px;text-align:center">
+    <div style="font-size:28px;font-weight:800;color:#C9333B;margin-bottom:16px;font-family:'Oswald',sans-serif;letter-spacing:1px">Welcome to KoreanLang</div>
+    <div id="onboard-content" style="margin-bottom:24px"></div>
+    <button id="onboard-btn" onclick="nextOnboard()" style="width:100%;padding:14px;border-radius:12px;border:none;background:linear-gradient(135deg,#8F1A1A,#C9333B);color:#fff;font-size:16px;font-weight:700;font-family:inherit;cursor:pointer">Next</button>
+  </div>
+</div>
+</body>
+</html>
