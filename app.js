@@ -96,6 +96,243 @@ function speakKorean(text){
   }catch(e){}
 }
 
+/* ---------- sound effects (Web Audio oscillator tones, no assets) ---------- */
+var _ac=null;
+function _getAC(){
+  if(_ac&&_ac.state!=='closed')return _ac;
+  try{_ac=new (window.AudioContext||window.webkitAudioContext)();}catch(e){}
+  return _ac;
+}
+document.addEventListener('touchstart',function(){var a=_getAC();if(a&&a.state==='suspended')a.resume();},{once:true});
+document.addEventListener('click',function(){var a=_getAC();if(a&&a.state==='suspended')a.resume();},{once:true});
+function _playTone(freq,type,vol,dur){
+  try{
+    var c=_getAC();if(!c)return;
+    var o=c.createOscillator(),g=c.createGain();
+    o.connect(g);g.connect(c.destination);
+    o.type=type;o.frequency.setValueAtTime(freq,c.currentTime);
+    g.gain.setValueAtTime(vol,c.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001,c.currentTime+dur);
+    o.start(c.currentTime);o.stop(c.currentTime+dur);
+  }catch(e){}
+}
+function playTap(){_playTone(600,'sine',0.15,0.08);}
+function playCorrect(){_playTone(880,'sine',0.3,0.2);}
+function playWrong(){_playTone(200,'square',0.2,0.3);}
+function playLevelUp(){
+  try{var c=_getAC();if(!c)return;var t=c.currentTime;
+    [523,659,784].forEach(function(f,i){var o=c.createOscillator(),g=c.createGain();o.connect(g);g.connect(c.destination);o.type='sine';o.frequency.setValueAtTime(f,t+i*0.15);g.gain.setValueAtTime(0.3,t+i*0.15);g.gain.exponentialRampToValueAtTime(0.001,t+i*0.15+0.3);o.start(t+i*0.15);o.stop(t+i*0.15+0.3);});
+  }catch(e){}
+}
+function playVictoryFanfare(){
+  try{var c=_getAC();if(!c)return;var t=c.currentTime;
+    [523,659,784,1047,1319].forEach(function(f,i){var o=c.createOscillator(),g=c.createGain();o.connect(g);g.connect(c.destination);o.type='triangle';o.frequency.setValueAtTime(f,t+i*0.12);g.gain.setValueAtTime(0.25,t+i*0.12);g.gain.exponentialRampToValueAtTime(0.001,t+i*0.12+0.4);o.start(t+i*0.12);o.stop(t+i*0.12+0.4);});
+  }catch(e){}
+}
+function playFailBuzz(){
+  try{var c=_getAC();if(!c)return;var t=c.currentTime;
+    [300,200].forEach(function(f,i){var o=c.createOscillator(),g=c.createGain();o.connect(g);g.connect(c.destination);o.type='sawtooth';o.frequency.setValueAtTime(f,t+i*0.2);g.gain.setValueAtTime(0.15,t+i*0.2);g.gain.exponentialRampToValueAtTime(0.001,t+i*0.2+0.3);o.start(t+i*0.2);o.stop(t+i*0.2+0.3);});
+  }catch(e){}
+}
+
+/* ============================================================
+   GRAMMAR SCENE ILLUSTRATIONS — reusable inline-SVG builder library.
+   A small set of actor/prop generator functions composed per example,
+   rather than 60 fully bespoke illustrations (see langapp_launch_process.md).
+   ============================================================ */
+function gsWrap(bg,content){
+  return '<svg viewBox="0 0 200 150" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:200px;display:block;margin:0 auto 8px;border-radius:12px">'+
+    '<rect width="200" height="150" rx="14" fill="'+bg+'"/>'+content+
+    '<rect x="3" y="3" width="194" height="144" rx="12" fill="none" stroke="#8F1A1A" stroke-width="2.5" opacity=".6"/></svg>';
+}
+function gsActor(x,robe){
+  return '<circle cx="'+x+'" cy="55" r="13" fill="#e8b890"/>'+
+    '<path d="M'+(x-15)+',97 Q'+(x-15)+',71 '+x+',71 Q'+(x+15)+',71 '+(x+15)+',97 Z" fill="'+robe+'"/>'+
+    '<circle cx="'+(x-5)+'" cy="53" r="1.8" fill="#3a2a1a"/><circle cx="'+(x+5)+'" cy="53" r="1.8" fill="#3a2a1a"/>'+
+    '<path d="M'+(x-4)+',60 Q'+x+',63 '+(x+4)+',60" fill="none" stroke="#3a2a1a" stroke-width="1.3"/>'+
+    '<path d="M'+(x-13)+',47 Q'+x+',37 '+(x+13)+',47 Q'+(x+13)+',51 '+x+',49 Q'+(x-13)+',51 '+(x-13)+',47" fill="#1a1a1a"/>';
+}
+function gsActorRun(x,robe){ // leaning-forward running pose
+  return '<circle cx="'+x+'" cy="52" r="12" fill="#e8b890"/>'+
+    '<path d="M'+(x-16)+',95 Q'+(x-18)+',70 '+(x-2)+',68 Q'+(x+16)+',68 '+(x+10)+',95 Z" fill="'+robe+'"/>'+
+    '<circle cx="'+(x+2)+'" cy="50" r="1.6" fill="#3a2a1a"/>'+
+    '<path d="M'+(x-12)+',44 Q'+x+',34 '+(x+12)+',44 Q'+(x+12)+',48 '+x+',46 Q'+(x-12)+',48 '+(x-12)+',44" fill="#1a1a1a"/>'+
+    '<line x1="'+(x-16)+'" y1="100" x2="'+(x-26)+'" y2="115" stroke="'+robe+'" stroke-width="5" stroke-linecap="round"/>'+
+    '<line x1="'+(x+8)+'" y1="100" x2="'+(x+20)+'" y2="112" stroke="'+robe+'" stroke-width="5" stroke-linecap="round"/>';
+}
+function gsBowl(x,y){
+  return '<ellipse cx="'+x+'" cy="'+y+'" rx="26" ry="9" fill="#f0e8d0"/>'+
+    '<path d="M'+(x-26)+','+y+' Q'+x+','+(y+24)+' '+(x+26)+','+y+' Z" fill="#d4e4f0"/>'+
+    '<ellipse cx="'+x+'" cy="'+(y-6)+'" rx="20" ry="7" fill="#fffdf8"/>'+
+    '<rect x="'+(x-38)+'" y="'+(y-20)+'" width="4" height="22" rx="2" fill="#ccc" transform="rotate(30 '+(x-36)+' '+(y-10)+')"/>';
+}
+function gsCup(x,y,liquid){
+  return '<ellipse cx="'+x+'" cy="'+y+'" rx="18" ry="7" fill="#6B3E1C"/>'+
+    '<path d="M'+(x-18)+','+y+' Q'+x+','+(y+17)+' '+(x+18)+','+y+' Z" fill="'+(liquid||'#8B5E3C')+'"/>'+
+    '<path d="M'+(x-8)+','+(y-15)+' Q'+(x-12)+','+(y-23)+' '+(x-8)+','+(y-31)+'" fill="none" stroke="#fff" stroke-width="2" opacity=".4" stroke-linecap="round"/>'+
+    '<path d="M'+(x+2)+','+(y-15)+' Q'+(x-2)+','+(y-23)+' '+(x+2)+','+(y-31)+'" fill="none" stroke="#fff" stroke-width="2" opacity=".4" stroke-linecap="round"/>';
+}
+function gsGlass(x,y,liquid){
+  return '<path d="M'+(x-12)+','+(y-40)+' L'+(x-9)+','+y+' L'+(x+9)+','+y+' L'+(x+12)+','+(y-40)+' Z" fill="#d8eef8" opacity=".5"/>'+
+    '<path d="M'+(x-10)+','+(y-26)+' L'+(x-8.5)+','+y+' L'+(x+8.5)+','+y+' L'+(x+10)+','+(y-26)+' Z" fill="'+(liquid||'#a8d8f0')+'"/>'+
+    '<path d="M'+(x-12)+','+(y-40)+' L'+(x-9)+','+y+' L'+(x+9)+','+y+' L'+(x+12)+','+(y-40)+'" fill="none" stroke="#a0c0d0" stroke-width="1.5"/>';
+}
+function gsBook(x,y){
+  return '<rect x="'+(x-22)+'" y="'+(y-27)+'" width="44" height="54" rx="3" fill="#e8d4a0"/>'+
+    '<rect x="'+(x-22)+'" y="'+(y-27)+'" width="22" height="54" fill="#f0e8d0"/>'+
+    '<line x1="'+x+'" y1="'+(y-27)+'" x2="'+x+'" y2="'+(y+27)+'" stroke="#c0a060" stroke-width="1.5"/>'+
+    '<line x1="'+(x-14)+'" y1="'+(y-12)+'" x2="'+(x-3)+'" y2="'+(y-12)+'" stroke="#999" stroke-width="1"/>'+
+    '<line x1="'+(x-14)+'" y1="'+(y-4)+'" x2="'+(x-5)+'" y2="'+(y-4)+'" stroke="#999" stroke-width="1"/>';
+}
+function gsPhone(x,y){
+  return '<rect x="'+(x-17)+'" y="'+(y-27)+'" width="34" height="55" rx="5" fill="#2a2a3a"/>'+
+    '<rect x="'+(x-14)+'" y="'+(y-20)+'" width="28" height="38" rx="2" fill="#4a7ab0"/>'+
+    '<circle cx="'+x+'" cy="'+(y+23)+'" r="3" fill="#3a3a4a"/>';
+}
+function gsTV(x,y){
+  return '<rect x="'+(x-29)+'" y="'+(y-20)+'" width="58" height="40" rx="4" fill="#1a1a1a"/>'+
+    '<rect x="'+(x-25)+'" y="'+(y-16)+'" width="50" height="32" rx="2" fill="#2a6a9a"/>'+
+    '<polygon points="'+(x-8)+','+(y-8)+' '+(x-8)+','+(y+8)+' '+(x+6)+','+y+'" fill="#fff" opacity=".85"/>'+
+    '<rect x="'+(x-10)+'" y="'+(y+20)+'" width="20" height="4" rx="2" fill="#1a1a1a"/>';
+}
+function gsQuestion(x,y,col){return '<text x="'+x+'" y="'+y+'" font-size="34" fill="'+(col||'#C9333B')+'" font-family="Georgia" font-weight="bold" text-anchor="middle">?</text>';}
+function gsExclaim(x,y,col){return '<text x="'+x+'" y="'+y+'" font-size="34" fill="'+(col||'#C9333B')+'" font-family="Georgia" font-weight="bold" text-anchor="middle">!</text>';}
+function gsCheck(x,y){return '<path d="M'+(x-14)+','+y+' l9,10 l19,-24" fill="none" stroke="#3a9a3a" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>';}
+function gsX(x,y){return '<line x1="'+(x-16)+'" y1="'+(y-16)+'" x2="'+(x+16)+'" y2="'+(y+16)+'" stroke="#dc2626" stroke-width="5" stroke-linecap="round"/><line x1="'+(x+16)+'" y1="'+(y-16)+'" x2="'+(x-16)+'" y2="'+(y+16)+'" stroke="#dc2626" stroke-width="5" stroke-linecap="round"/>';}
+function gsArrow(x1,y1,x2,y2){
+  var ang=Math.atan2(y2-y1,x2-x1),ah=8;
+  var ax1=x2-ah*Math.cos(ang-0.5),ay1=y2-ah*Math.sin(ang-0.5);
+  var ax2=x2-ah*Math.cos(ang+0.5),ay2=y2-ah*Math.sin(ang+0.5);
+  return '<line x1="'+x1+'" y1="'+y1+'" x2="'+x2+'" y2="'+y2+'" stroke="#C9333B" stroke-width="4" stroke-linecap="round"/>'+
+    '<polygon points="'+x2+','+y2+' '+ax1+','+ay1+' '+ax2+','+ay2+'" fill="#C9333B"/>';
+}
+function gsCat(x,y){
+  return '<ellipse cx="'+x+'" cy="'+(y+17)+'" rx="16" ry="12" fill="#c0a060"/>'+
+    '<circle cx="'+x+'" cy="'+y+'" r="12" fill="#c0a060"/>'+
+    '<polygon points="'+(x-9)+','+(y-8)+' '+(x-9)+','+y+' '+(x-3)+','+(y-4)+'" fill="#c0a060"/>'+
+    '<polygon points="'+(x+9)+','+(y-8)+' '+(x+9)+','+y+' '+(x+3)+','+(y-4)+'" fill="#c0a060"/>'+
+    '<circle cx="'+(x-4)+'" cy="'+(y-2)+'" r="2" fill="#3a2a1a"/><circle cx="'+(x+4)+'" cy="'+(y-2)+'" r="2" fill="#3a2a1a"/>'+
+    '<path d="M'+(x-2)+','+(y+2)+' Q'+x+','+(y+4)+' '+(x+2)+','+(y+2)+'" fill="none" stroke="#3a2a1a" stroke-width="1"/>';
+}
+function gsHouse(x,y){
+  return '<rect x="'+(x-27)+'" y="'+y+'" width="54" height="34" fill="#5a4a7a"/>'+
+    '<polygon points="'+(x-30)+','+y+' '+x+','+(y-22)+' '+(x+30)+','+y+'" fill="#C9333B"/>'+
+    '<rect x="'+(x-9)+'" y="'+(y+9)+'" width="18" height="25" fill="#3a2a4a"/>';
+}
+function gsBus(x,y){
+  return '<rect x="'+(x-30)+'" y="'+(y-14)+'" width="60" height="30" rx="5" fill="#3D6BC4"/>'+
+    '<rect x="'+(x-24)+'" y="'+(y-9)+'" width="16" height="12" rx="1" fill="#cfe6f7"/>'+
+    '<rect x="'+(x-2)+'" y="'+(y-9)+'" width="16" height="12" rx="1" fill="#cfe6f7"/>'+
+    '<circle cx="'+(x-18)+'" cy="'+(y+18)+'" r="6" fill="#1a1a1a"/><circle cx="'+(x+18)+'" cy="'+(y+18)+'" r="6" fill="#1a1a1a"/>';
+}
+function gsSpeedLines(x,y){
+  return '<line x1="'+(x-38)+'" y1="'+(y-8)+'" x2="'+(x-20)+'" y2="'+(y-8)+'" stroke="#C9333B" stroke-width="3" stroke-linecap="round" opacity=".7"/>'+
+    '<line x1="'+(x-42)+'" y1="'+y+'" x2="'+(x-20)+'" y2="'+y+'" stroke="#C9333B" stroke-width="3" stroke-linecap="round" opacity=".5"/>'+
+    '<line x1="'+(x-38)+'" y1="'+(y+8)+'" x2="'+(x-20)+'" y2="'+(y+8)+'" stroke="#C9333B" stroke-width="3" stroke-linecap="round" opacity=".7"/>';
+}
+function gsZzz(x,y){return '<text x="'+x+'" y="'+y+'" font-size="20" fill="#C9333B" font-family="Georgia" font-style="italic">z</text><text x="'+(x+13)+'" y="'+(y-12)+'" font-size="14" fill="#C9333B" font-family="Georgia" font-style="italic">z</text>';}
+function gsRainCloud(x,y){
+  return '<ellipse cx="'+x+'" cy="'+y+'" rx="26" ry="14" fill="#6a7a9a"/>'+
+    '<ellipse cx="'+(x-14)+'" cy="'+(y+4)+'" rx="16" ry="11" fill="#6a7a9a"/>'+
+    '<ellipse cx="'+(x+14)+'" cy="'+(y+4)+'" rx="16" ry="11" fill="#8a9ab5"/>'+
+    '<line x1="'+(x-14)+'" y1="'+(y+22)+'" x2="'+(x-18)+'" y2="'+(y+34)+'" stroke="#a8d8f0" stroke-width="3" stroke-linecap="round"/>'+
+    '<line x1="'+x+'" y1="'+(y+22)+'" x2="'+(x-4)+'" y2="'+(y+34)+'" stroke="#a8d8f0" stroke-width="3" stroke-linecap="round"/>'+
+    '<line x1="'+(x+14)+'" y1="'+(y+22)+'" x2="'+(x+10)+'" y2="'+(y+34)+'" stroke="#a8d8f0" stroke-width="3" stroke-linecap="round"/>';
+}
+function gsClock(x,y,alarmed){
+  return '<circle cx="'+x+'" cy="'+y+'" r="18" fill="#e8d4a0"/><circle cx="'+x+'" cy="'+y+'" r="15" fill="#f0e8d0"/>'+
+    '<line x1="'+x+'" y1="'+y+'" x2="'+x+'" y2="'+(y-10)+'" stroke="#3a2a1a" stroke-width="1.5"/>'+
+    '<line x1="'+x+'" y1="'+y+'" x2="'+(x+7)+'" y2="'+(y+3)+'" stroke="#3a2a1a" stroke-width="1.5"/>'+
+    (alarmed?('<line x1="'+(x-24)+'" y1="'+(y-20)+'" x2="'+(x-18)+'" y2="'+(y-14)+'" stroke="#C9333B" stroke-width="2" stroke-linecap="round"/><line x1="'+(x+24)+'" y1="'+(y-20)+'" x2="'+(x+18)+'" y2="'+(y-14)+'" stroke="#C9333B" stroke-width="2" stroke-linecap="round"/>'):'');
+}
+function gsHeart(x,y,col){
+  col=col||'#C9333B';
+  return '<path d="M'+x+','+(y+16)+' C'+(x-22)+','+(y-6)+' '+(x-10)+','+(y-22)+' '+x+','+(y-8)+' C'+(x+10)+','+(y-22)+' '+(x+22)+','+(y-6)+' '+x+','+(y+16)+' Z" fill="'+col+'"/>';
+}
+function gsStar(x,y,sz,col){
+  sz=sz||3;col=col||'#C9333B';
+  return '<path d="M'+x+','+(y-sz)+' L'+(x+sz*0.22)+','+(y-sz*0.28)+' L'+(x+sz)+','+(y-sz*0.28)+' L'+(x+sz*0.36)+','+(y+sz*0.14)+' L'+(x+sz*0.58)+','+(y+sz)+' L'+x+','+(y+sz*0.44)+' L'+(x-sz*0.58)+','+(y+sz)+' L'+(x-sz*0.36)+','+(y+sz*0.14)+' L'+(x-sz)+','+(y-sz*0.28)+' L'+(x-sz*0.22)+','+(y-sz*0.28)+' Z" fill="'+col+'"/>';
+}
+function gsBag(x,y){
+  return '<path d="M'+(x-18)+','+(y-4)+' L'+(x-22)+','+(y+30)+' L'+(x+22)+','+(y+30)+' L'+(x+18)+','+(y-4)+' Z" fill="'+(y%2?'#C9333B':'#3D6BC4')+'"/>'+
+    '<path d="M'+(x-10)+','+(y-4)+' Q'+(x-10)+','+(y-20)+' '+x+','+(y-20)+' Q'+(x+10)+','+(y-20)+' '+(x+10)+','+(y-4)+'" fill="none" stroke="#8a6a3a" stroke-width="3"/>';
+}
+function gsPriceTag(x,y,txt){
+  return '<circle cx="'+x+'" cy="'+y+'" r="18" fill="#8F1A1A22" stroke="#C9333B" stroke-width="2"/>'+
+    '<text x="'+x+'" y="'+(y+7)+'" font-size="16" fill="#C9333B" font-family="sans-serif" font-weight="700" text-anchor="middle">'+txt+'</text>';
+}
+function gsTaegeuk(x,y,r){
+  r=r||16;
+  return '<circle cx="'+x+'" cy="'+y+'" r="'+r+'" fill="#0d1025" stroke="#3a2a2a" stroke-width="1"/>'+
+    '<path d="M'+x+','+(y-r*0.75)+' a'+(r*0.37)+' '+(r*0.37)+' 0 0 1 0 '+(r*0.75)+' a'+(r*0.37)+' '+(r*0.37)+' 0 0 0 0 '+(r*0.75)+' a'+(r*0.75)+' '+(r*0.75)+' 0 0 0 0 -'+(r*1.5)+'" fill="#C9333B"/>'+
+    '<path d="M'+x+','+(y-r*0.75)+' a'+(r*0.37)+' '+(r*0.37)+' 0 0 0 0 '+(r*0.75)+' a'+(r*0.37)+' '+(r*0.37)+' 0 0 1 0 '+(r*0.75)+' a'+(r*0.75)+' '+(r*0.75)+' 0 0 1 0 -'+(r*1.5)+'" fill="#3D6BC4"/>';
+}
+var GRAMMAR_IMGS={};
+(function(){
+  var A=gsActor,ARed='#C9333B',ABlue='#3D6BC4',AGreen='#3a7a3a',APink='#d8709a',AGold='#c0973a';
+  function set(phon,bg,content){GRAMMAR_IMGS[phon]=gsWrap(bg,content);}
+  set('annyeonghaseyo','#1a1035',A(58,ARed)+A(140,ABlue)+'<path d="M74,58 Q82,48 90,58" fill="none" stroke="#C9333B" stroke-width="2" stroke-linecap="round"/><path d="M108,58 Q116,48 124,58" fill="none" stroke="#C9333B" stroke-width="2" stroke-linecap="round"/>');
+  set('gamsahamnida','#1a1035',A(70,ARed)+gsHeart(140,60,'#e84030'));
+  set('jeoneun meogeoyo','#1a1035',A(55,ARed)+gsBowl(140,95));
+  set('geuneun masyeoyo','#0a1628',A(55,ABlue)+gsGlass(140,100,'#a8d8f0'));
+  set('jeoneun babeul meogeoyo','#1a1035',A(50,ARed)+gsBowl(140,95));
+  set('geunyeoneun mureul masyeoyo','#0a1628',A(50,APink)+gsGlass(140,100,'#a8d8f0'));
+  set('jeoneun haksaengieyo','#1a1035',A(55,ARed)+gsBook(140,80));
+  set('hangugeoneun jaemiisseoyo','#1a1035',gsBook(70,80)+gsStar(140,60,10)+gsStar(160,80,6));
+  set('keopireul masyeoyo','#0a1628',gsCup(100,95,'#6B3E1C'));
+  set('chaegeul ilgeoyo','#1a1035',A(55,AGreen)+gsBook(140,85));
+  set('gayo','#16213a',A(60,AGreen)+gsArrow(90,80,150,80));
+  set('gongbuhaeyo','#1a1035',A(55,ABlue)+gsBook(140,85));
+  set('meogeosseoyo','#1a2a1a',gsBowl(100,90)+gsCheck(100,55));
+  set('eoje hakgyoe gasseoyo','#16213a',A(45,AGreen)+gsArrow(75,80,105,80)+gsHouse(150,75));
+  set('meokgo isseoyo','#1a1035',A(55,ARed)+gsBowl(140,95)+gsSpeedLines(140,60));
+  set('geuneun ttwigo isseoyo','#16213a',gsActorRun(70,AGreen)+gsSpeedLines(30,80));
+  set('meokgo sipeoyo','#1a1035',gsBowl(100,95)+gsHeart(150,55,'#e84030'));
+  set('hanguge gago sipeoyo','#1a1035',A(45,ARed)+gsArrow(75,75,110,75)+gsTaegeuk(155,60,18));
+  set('hangugeoreul hal su isseoyo','#1a1035',A(50,ABlue)+gsCheck(150,60));
+  set('suyeonghal su eopseoyo','#0a1628',gsGlass(90,95,'#a8d8f0')+gsX(150,65));
+  set('mwo meogeoyo?','#3a2500',gsBowl(90,90)+gsQuestion(155,55));
+  set('eodie gayo?','#16213a',gsArrow(50,80,110,80)+gsQuestion(155,55));
+  set('goyangiga isseoyo','#1a1035',gsCat(100,75));
+  set('babi masisseoyo','#3a2500',gsBowl(90,90)+gsStar(150,50,8)+gsStar(165,70,5));
+  set('gidaryeo juseyo','#1a1035',A(60,ARed)+gsClock(150,65));
+  set('cheoncheonhi malhae juseyo','#1a1035',A(60,AGreen)+'<path d="M90,55 Q98,45 106,55" fill="none" stroke="#C9333B" stroke-width="2" stroke-linecap="round"/><path d="M90,68 Q100,60 110,68" fill="none" stroke="#C9333B" stroke-width="1.5" stroke-linecap="round" opacity=".5"/>');
+  set('an meogeoyo','#3a1a1a',gsBowl(100,90)+gsX(100,55));
+  set('gaji anayo','#16213a',gsArrow(60,80,110,80)+gsX(150,80));
+  set('babeul meokgo keopireul masyeoyo','#1a1035',gsBowl(65,95)+gsCup(150,95,'#6B3E1C'));
+  set('jibe gago jayo','#1a1a3a',gsHouse(70,80)+gsZzz(150,60));
+  set('biga omyeon jibe isseoyo','#16213a',gsRainCloud(65,60)+gsHouse(150,90));
+  set('sigani isseumyeon mannayo','#1a1035',gsClock(60,70)+A(115,ARed)+A(150,ABlue));
+  set('jeoboda keoyo','#1a1035',A(60,ABlue,'small')+'<circle cx="150" cy="45" r="15" fill="#e8b890"/><path d="M132,95 Q132,63 150,63 Q168,63 168,95 Z" fill="'+ARed+'"/>');
+  set('beoseuboda ppallayo','#16213a',gsBus(80,85)+gsSpeedLines(155,85));
+  set('geokjeonghaji maseyo','#1a1035',A(70,AGreen)+gsHeart(140,65,'#3a9a3a')+gsX(140,40));
+  set('neutji maseyo','#1a1035',gsClock(90,75)+gsX(150,75));
+  set('jagi jeone chaegeul ilgeoyo','#1a1a3a',gsZzz(60,55)+gsBook(140,90));
+  set('meogeun hue swieoyo','#1a2a1a',gsBowl(70,90)+gsCheck(70,55)+A(150,AGreen));
+  set('gaya dwaeyo','#1a1035',gsArrow(70,80,130,80)+gsExclaim(165,60));
+  set('sukjereul haeya dwaeyo','#1a1035',gsBook(90,85)+gsExclaim(155,55));
+  set('masinneyo','#3a2500',gsBowl(100,90)+gsExclaim(150,50)+gsStar(165,75,6));
+  set('bissaneyo','#3a2500',gsPriceTag(100,70,'₩')+gsExclaim(155,55));
+  set('bissajiman masisseoyo','#3a2500',gsPriceTag(65,65,'₩')+gsBowl(150,95));
+  set('bappeujiman gal geoyeyo','#1a1035',gsClock(65,65)+gsArrow(100,90,155,90));
+  set('yorihaneun geoseul joahaeyo','#3a2500',gsBowl(90,90)+gsHeart(155,55,'#e84030'));
+  set('yeonghwa boneun geoseul joahaeyo','#0f0f28',gsTV(90,75)+gsHeart(160,55,'#e84030'));
+  set('babeul meogeureo gayo','#1a1035',gsArrow(55,90,105,90)+gsBowl(150,90));
+  set('syopinghareo gayo','#1a1035',gsArrow(55,85,100,85)+gsBag(150,80));
+  set('bappaseo mot gayo','#1a1035',gsClock(60,65)+gsX(115,65)+gsArrow(145,90,180,90));
+  set('baegopaseo babeul meogeoyo','#3a2500',gsHeart(60,60,'#f0944a')+gsArrow(90,80,120,80)+gsBowl(160,90));
+  set('naeil gal geoyeyo','#1a1a4a',gsClock(60,60)+gsArrow(105,85,160,85));
+  set('biga ol geoyeyo','#16213a',gsRainCloud(100,70)+gsExclaim(160,90));
+  set('gachi galkkayo?','#1a1035',A(80,ARed)+A(115,ABlue)+gsQuestion(160,55));
+  set('mwo meogeulkkayo?','#3a2500',gsBowl(90,90)+gsQuestion(155,55));
+  set('yeogi anjeuseyo','#1a1035','<rect x="80" y="60" width="40" height="8" rx="2" fill="#8B5E3C"/><rect x="82" y="68" width="6" height="30" fill="#6B3E1C"/><rect x="112" y="68" width="6" height="30" fill="#6B3E1C"/><rect x="80" y="30" width="8" height="38" rx="2" fill="#8B5E3C"/>');
+  set('seonsaengnimeun keopireul deuseyo','#1a1035',A(55,AGold)+gsCup(130,90,'#6B3E1C')+gsStar(165,50,7));
+  set('bi ttaemune an gayo','#16213a',gsRainCloud(65,55)+gsArrow(105,90,150,90)+gsX(150,90));
+  set('sigani eopgi ttaemune mot gayo','#1a1035',gsClock(60,65)+gsX(60,65)+gsArrow(105,90,155,90));
+  set('bissande sago sipeoyo','#3a2500',gsPriceTag(65,65,'₩')+gsBag(150,80)+gsHeart(150,45,'#e84030'));
+  set('baegopeunde sigani eopseoyo','#1a1035',gsBowl(65,90)+gsClock(150,60)+gsX(150,60));
+})();
+
 /* ============================================================
    GRAMMAR CONTENT — 5 levels
    ============================================================ */
@@ -421,6 +658,8 @@ function renderGrammarLesson(lv){
   for(var e=0;e<pat.examples.length;e++){
     if(e>0)h+='<div style="margin:14px 0;height:1px;background:linear-gradient(90deg,transparent,var(--border2),transparent)"></div>';
     var ex=pat.examples[e];
+    var img=GRAMMAR_IMGS[ex.phon];
+    if(img)h+=img;
     h+='<div style="text-align:center;margin-bottom:10px">'+
        '<button onclick="speakKorean(\''+ex.thai.replace(/'/g,"\\'")+'\')" style="background:none;border:none;cursor:pointer;color:var(--purple);display:inline-flex;align-items:center;gap:6px;margin-bottom:4px">'+svgI('speaker',14)+'</button>'+
        '<div style="font-size:15px;color:var(--text);font-weight:600;line-height:1.5;margin-bottom:2px">'+ex.eng+'</div>'+
@@ -457,9 +696,11 @@ function setupGramBuild(area,ex,onDone){
       if(btn.classList.contains('used'))return;
       if(w.t!==correct[built.length]){
         btn.style.animation='wrongShake .3s';setTimeout(function(){btn.style.animation='';},300);
+        playWrong();
         return;
       }
       btn.classList.add('used');btn.style.opacity='.25';btn.style.pointerEvents='none';
+      playTap();
       speakKorean(w.t);
       built.push(w.t);
       var chip=document.createElement('div');
@@ -475,6 +716,7 @@ function setupGramBuild(area,ex,onDone){
 var _gramPageDoneFlag=false;
 function gramPageDone(lv,colVar){
   if(_gramPageDoneFlag)return;_gramPageDoneFlag=true;
+  playCorrect();
   var fb=document.getElementById('gram-feedback');
   if(fb){fb.style.color='var(--green)';fb.innerHTML=svgI('check',16)+' Nice!';}
   var btn=document.getElementById('gram-next-btn');
@@ -492,6 +734,7 @@ function gramPageDone(lv,colVar){
 }
 function grammarLevelComplete(lv){
   grammarViewed[lv]=true; saveState();
+  playLevelUp();
   var root=document.getElementById('grammar-content');
   if(!root)return;
   var colVar=LEVEL_COLOR_VAR[lv-1];
@@ -591,6 +834,89 @@ var MASTER_VOCAB=[
 {t:'간단해요',p:'gandanhaeyo',e:'simple',lv:5,cat:'descriptors'},{t:'따라서',p:'ttaraseo',e:'therefore',lv:5,cat:'conditionals'},
 {t:'예를 들면',p:'yereul deulmyeon',e:'for example',lv:5,cat:'conditionals'},{t:'반면에',p:'banmyeone',e:'on the other hand',lv:5,cat:'conditionals'},
 {t:'만약',p:'manyak',e:'if / in the event that',lv:5,cat:'conditionals'},{t:'결국',p:'gyeolguk',e:'in the end',lv:5,cat:'conditionals'},
+// ── Expansion pass (HardScan vs. ManLang, 2026-08-04) — verbs ──
+{t:'만나요',p:'mannayo',e:'meet',lv:1,cat:'verbs'},{t:'전화해요',p:'jeonhwahaeyo',e:'call / phone',lv:1,cat:'verbs'},
+{t:'보내요',p:'bonaeyo',e:'send',lv:2,cat:'verbs'},{t:'받아요',p:'badayo',e:'receive',lv:2,cat:'verbs'},
+{t:'열어요',p:'yeoreoyo',e:'open',lv:2,cat:'verbs'},{t:'닫아요',p:'dadayo',e:'close',lv:2,cat:'verbs'},
+{t:'켜요',p:'kyeoyo',e:'turn on',lv:2,cat:'verbs'},{t:'꺼요',p:'kkeoyo',e:'turn off',lv:2,cat:'verbs'},
+{t:'찾아요',p:'chajayo',e:'find / look for',lv:3,cat:'verbs'},{t:'잃어버려요',p:'ireobeoryeoyo',e:'lose (something)',lv:3,cat:'verbs'},
+{t:'빌려요',p:'billyeoyo',e:'borrow',lv:3,cat:'verbs'},{t:'빌려줘요',p:'billyeojwoyo',e:'lend',lv:3,cat:'verbs'},
+{t:'고쳐요',p:'gochyeoyo',e:'fix / repair',lv:4,cat:'verbs'},{t:'바꿔요',p:'bakkwoyo',e:'change / exchange',lv:4,cat:'verbs'},
+{t:'기억해요',p:'gieokhaeyo',e:'remember',lv:4,cat:'verbs'},{t:'잊어버려요',p:'ijeobeoryeoyo',e:'forget',lv:4,cat:'verbs'},
+// ── nouns ──
+{t:'나라',p:'nara',e:'country',lv:1,cat:'nouns'},{t:'도시',p:'dosi',e:'city',lv:1,cat:'nouns'},
+{t:'마을',p:'maeul',e:'town / village',lv:1,cat:'nouns'},{t:'산',p:'san',e:'mountain',lv:1,cat:'nouns'},
+{t:'강',p:'gang',e:'river',lv:1,cat:'nouns'},{t:'바다',p:'bada',e:'sea',lv:1,cat:'nouns'},
+{t:'하늘',p:'haneul',e:'sky',lv:1,cat:'nouns'},{t:'나무',p:'namu',e:'tree',lv:1,cat:'nouns'},
+{t:'꽃',p:'kkot',e:'flower',lv:1,cat:'nouns'},{t:'동물',p:'dongmul',e:'animal',lv:1,cat:'nouns'},
+{t:'강아지',p:'gangaji',e:'puppy / dog',lv:1,cat:'nouns'},{t:'고양이',p:'goyangi',e:'cat',lv:1,cat:'nouns'},
+{t:'새',p:'sae',e:'bird',lv:1,cat:'nouns'},{t:'길',p:'gil',e:'road / way',lv:2,cat:'nouns'},
+{t:'다리',p:'dari',e:'bridge',lv:2,cat:'nouns'},{t:'건물',p:'geonmul',e:'building',lv:2,cat:'nouns'},
+{t:'방',p:'bang',e:'room',lv:2,cat:'nouns'},{t:'창문',p:'changmun',e:'window',lv:2,cat:'nouns'},
+{t:'문',p:'mun',e:'door',lv:2,cat:'nouns'},{t:'의자',p:'uija',e:'chair',lv:2,cat:'nouns'},
+{t:'책상',p:'chaeksang',e:'desk',lv:2,cat:'nouns'},{t:'침대',p:'chimdae',e:'bed',lv:2,cat:'nouns'},
+{t:'거울',p:'geoul',e:'mirror',lv:3,cat:'nouns'},{t:'우산',p:'usan',e:'umbrella',lv:3,cat:'nouns'},
+{t:'지갑',p:'jigap',e:'wallet',lv:3,cat:'nouns'},
+// ── feelings ──
+{t:'무서워요',p:'museowoyo',e:'scared',lv:2,cat:'feelings'},{t:'외로워요',p:'oeroweoyo',e:'lonely',lv:2,cat:'feelings'},
+{t:'심심해요',p:'simsimhaeyo',e:'bored',lv:2,cat:'feelings'},{t:'편해요',p:'pyeonhaeyo',e:'comfortable',lv:2,cat:'feelings'},
+{t:'불편해요',p:'bulpyeonhaeyo',e:'uncomfortable',lv:3,cat:'feelings'},{t:'부끄러워요',p:'bukkeureowoyo',e:'embarrassed',lv:3,cat:'feelings'},
+{t:'자랑스러워요',p:'jarangseureowoyo',e:'proud',lv:3,cat:'feelings'},{t:'감사해요',p:'gamsahaeyo',e:'grateful',lv:2,cat:'feelings'},
+{t:'속상해요',p:'soksanghaeyo',e:'upset',lv:3,cat:'feelings'},{t:'답답해요',p:'dapdaphaeyo',e:'frustrated',lv:4,cat:'feelings'},
+{t:'설레요',p:'seollaeyo',e:'excited / thrilled',lv:3,cat:'feelings'},
+// ── time ──
+{t:'지난주',p:'jinanju',e:'last week',lv:2,cat:'time'},{t:'다음 주',p:'daeum ju',e:'next week',lv:2,cat:'time'},
+{t:'지난달',p:'jinandal',e:'last month',lv:2,cat:'time'},{t:'다음 달',p:'daeum dal',e:'next month',lv:2,cat:'time'},
+{t:'작년',p:'jangnyeon',e:'last year',lv:3,cat:'time'},{t:'내년',p:'naenyeon',e:'next year',lv:3,cat:'time'},
+{t:'올해',p:'olhae',e:'this year',lv:3,cat:'time'},{t:'잠시 후',p:'jamsi hu',e:'in a moment',lv:3,cat:'time'},
+{t:'곧',p:'got',e:'soon',lv:2,cat:'time'},{t:'아직',p:'ajik',e:'still / yet',lv:2,cat:'time'},
+// ── modals ──
+{t:'해도 돼요',p:'haedo dwaeyo',e:'may do',lv:3,cat:'modals'},{t:'하면 안 돼요',p:'hamyeon an dwaeyo',e:'must not do',lv:3,cat:'modals'},
+{t:'할 필요 없어요',p:'hal pillyo eopseoyo',e:'don’t need to',lv:3,cat:'modals'},{t:'해야만 해요',p:'haeyaman haeyo',e:'absolutely must',lv:4,cat:'modals'},
+{t:'하려고 해요',p:'haryeogo haeyo',e:'intend to',lv:4,cat:'modals'},{t:'할 것 같아요',p:'hal geot gatayo',e:'seems like it will',lv:4,cat:'modals'},
+{t:'하는 게 좋아요',p:'haneun ge joayo',e:'it’s better to',lv:3,cat:'modals'},{t:'할 줄 알아요',p:'hal jul arayo',e:'know how to',lv:3,cat:'modals'},
+{t:'할 줄 몰라요',p:'hal jul mollayo',e:'don’t know how to',lv:3,cat:'modals'},{t:'해 본 적 있어요',p:'hae bon jeok isseoyo',e:'have tried before',lv:4,cat:'modals'},
+{t:'해 본 적 없어요',p:'hae bon jeok eopseoyo',e:'have never tried',lv:4,cat:'modals'},{t:'믿어요',p:'mideoyo',e:'believe',lv:4,cat:'modals'},
+{t:'확신해요',p:'hwaksinhaeyo',e:'be certain',lv:5,cat:'modals'},{t:'추측해요',p:'chucheukhaeyo',e:'guess',lv:5,cat:'modals'},
+{t:'상상해요',p:'sangsanghaeyo',e:'imagine',lv:5,cat:'modals'},
+// ── questions ──
+{t:'뭐',p:'mwo',e:'what',lv:1,cat:'questions'},{t:'어디',p:'eodi',e:'where',lv:1,cat:'questions'},
+{t:'언제',p:'eonje',e:'when',lv:1,cat:'questions'},{t:'왜',p:'wae',e:'why',lv:1,cat:'questions'},
+{t:'어떻게',p:'eotteoke',e:'how',lv:2,cat:'questions'},{t:'얼마나',p:'eolmana',e:'how much / how long',lv:2,cat:'questions'},
+{t:'몇',p:'myeot',e:'how many',lv:2,cat:'questions'},{t:'어느',p:'eoneu',e:'which',lv:2,cat:'questions'},
+{t:'무엇',p:'mueot',e:'what (formal)',lv:3,cat:'questions'},{t:'어느 것',p:'eoneu geot',e:'which one',lv:2,cat:'questions'},
+{t:'얼마',p:'eolma',e:'how much (price)',lv:1,cat:'questions'},{t:'몇 시',p:'myeot si',e:'what time',lv:2,cat:'questions'},
+{t:'며칠',p:'myeochil',e:'what day / how many days',lv:3,cat:'questions'},{t:'얼마 동안',p:'eolma dongan',e:'for how long',lv:3,cat:'questions'},
+// ── conditionals / connectors ──
+{t:'그러면',p:'geureomyeon',e:'then / in that case',lv:3,cat:'conditionals'},{t:'그러나',p:'geureona',e:'but (formal)',lv:4,cat:'conditionals'},
+{t:'또는',p:'ttoneun',e:'or',lv:2,cat:'conditionals'},{t:'혹은',p:'hogeun',e:'or else',lv:4,cat:'conditionals'},
+{t:'게다가',p:'gedaga',e:'moreover',lv:5,cat:'conditionals'},{t:'그래도',p:'geuraedo',e:'even so',lv:4,cat:'conditionals'},
+{t:'대신에',p:'daesine',e:'instead of',lv:4,cat:'conditionals'},{t:'동안',p:'dongan',e:'while / during',lv:3,cat:'conditionals'},
+// ── particles (new category) ──
+{t:'은',p:'eun',e:'topic marker (after consonant)',lv:1,cat:'particles'},{t:'는',p:'neun',e:'topic marker (after vowel)',lv:1,cat:'particles'},
+{t:'이',p:'i',e:'subject marker (after consonant)',lv:1,cat:'particles'},{t:'가',p:'ga',e:'subject marker (after vowel)',lv:1,cat:'particles'},
+{t:'을',p:'eul',e:'object marker (after consonant)',lv:1,cat:'particles'},{t:'를',p:'reul',e:'object marker (after vowel)',lv:1,cat:'particles'},
+{t:'에',p:'e',e:'at / to (place, time)',lv:1,cat:'particles'},{t:'에서',p:'eseo',e:'at / from (place of action)',lv:2,cat:'particles'},
+{t:'도',p:'do',e:'also / too',lv:2,cat:'particles'},{t:'만',p:'man',e:'only',lv:2,cat:'particles'},
+{t:'과',p:'gwa',e:'and / with (after consonant)',lv:2,cat:'particles'},{t:'와',p:'wa',e:'and / with (after vowel)',lv:2,cat:'particles'},
+{t:'한테',p:'hante',e:'to (a person)',lv:3,cat:'particles'},{t:'께',p:'kke',e:'to (honorific)',lv:5,cat:'particles'},
+{t:'로',p:'ro',e:'by / toward (after vowel)',lv:3,cat:'particles'},{t:'으로',p:'euro',e:'by / toward (after consonant)',lv:3,cat:'particles'},
+{t:'까지',p:'kkaji',e:'until / up to',lv:3,cat:'particles'},
+// ── descriptors ──
+{t:'길어요',p:'gireoyo',e:'long',lv:2,cat:'descriptors'},{t:'짧아요',p:'jjalbayo',e:'short',lv:2,cat:'descriptors'},
+{t:'높아요',p:'nopayo',e:'high',lv:2,cat:'descriptors'},{t:'낮아요',p:'najayo',e:'low',lv:2,cat:'descriptors'},
+{t:'무거워요',p:'mugeowoyo',e:'heavy',lv:2,cat:'descriptors'},{t:'가벼워요',p:'gabyeowoyo',e:'light (weight)',lv:2,cat:'descriptors'},
+{t:'빨라요',p:'ppallayo',e:'fast',lv:1,cat:'descriptors'},{t:'느려요',p:'neuryeoyo',e:'slow',lv:1,cat:'descriptors'},
+{t:'깨끗해요',p:'kkaekkeuthaeyo',e:'clean',lv:2,cat:'descriptors'},{t:'더러워요',p:'deoreowoyo',e:'dirty',lv:2,cat:'descriptors'},
+{t:'조용해요',p:'joyonghaeyo',e:'quiet',lv:2,cat:'descriptors'},{t:'시끄러워요',p:'sikkeureowoyo',e:'loud',lv:2,cat:'descriptors'},
+{t:'따뜻해요',p:'ttatteuthaeyo',e:'warm',lv:1,cat:'descriptors'},{t:'시원해요',p:'siwonhaeyo',e:'cool / refreshing',lv:1,cat:'descriptors'},
+{t:'더워요',p:'deowoyo',e:'hot (weather)',lv:1,cat:'descriptors'},{t:'추워요',p:'chuwoyo',e:'cold (weather)',lv:1,cat:'descriptors'},
+{t:'똑똑해요',p:'ttokttokhaeyo',e:'smart',lv:2,cat:'descriptors'},{t:'멋있어요',p:'meositsseoyo',e:'cool / stylish',lv:2,cat:'descriptors'},
+{t:'아름다워요',p:'areumdawoyo',e:'beautiful',lv:2,cat:'descriptors'},{t:'강해요',p:'ganghaeyo',e:'strong',lv:2,cat:'descriptors'},
+{t:'약해요',p:'yakhaeyo',e:'weak',lv:2,cat:'descriptors'},{t:'넓어요',p:'neolbeoyo',e:'wide',lv:3,cat:'descriptors'},
+{t:'좁아요',p:'jobayo',e:'narrow',lv:3,cat:'descriptors'},{t:'두꺼워요',p:'dukkeowoyo',e:'thick',lv:3,cat:'descriptors'},
+{t:'얇아요',p:'yalbayo',e:'thin',lv:3,cat:'descriptors'},{t:'단단해요',p:'dandanhaeyo',e:'solid / hard',lv:3,cat:'descriptors'},
+{t:'부드러워요',p:'budeureowoyo',e:'soft',lv:3,cat:'descriptors'},{t:'편리해요',p:'pyeollihaeyo',e:'convenient',lv:4,cat:'descriptors'},
 ];
 function vocabByLevel(lv){return MASTER_VOCAB.filter(function(w){return w.lv===lv;});}
 function vocabUpTo(lv){return MASTER_VOCAB.filter(function(w){return w.lv<=lv;});}
@@ -676,10 +1002,10 @@ function answerQuiz(correct,btn){
   for(var i=0;i<opts.length;i++)opts[i].disabled=true;
   if(correct){
     quizScore++; xp+=5; updateXP();
-    btn.classList.add('correct');
+    btn.classList.add('correct'); playCorrect();
     document.getElementById('q-result').innerHTML='<span style="color:var(--green)">Correct! ✓</span>';
   } else {
-    btn.classList.add('wrong');
+    btn.classList.add('wrong'); playWrong();
     document.getElementById('q-result').innerHTML='<span style="color:var(--red)">Not quite</span>';
   }
   document.getElementById('q-set-score').textContent=quizScore+' / 10';
@@ -704,7 +1030,7 @@ function finishQuizRound(){
   document.getElementById('q-result').innerHTML='<div style="font-size:16px;font-weight:700;color:'+(passed?'var(--green)':'var(--amber)')+'">'+msg+'</div>';
   document.getElementById('q-thai').textContent=''; document.getElementById('q-phon').textContent='';
   document.getElementById('q-label').textContent=passed?'Nice work!':'Keep practicing';
-  if(passed && quizScore===10){showVictory();} else if(!passed){/* no failure overlay for quiz, keep it light */}
+  if(passed && quizScore===10){showVictory();} else if(passed){playLevelUp();} else {playFailBuzz();}
   var nb=document.getElementById('q-next');
   nb.textContent = passed ? (allModesDone(quizLevel)?'Back to Home →':'Next mode →') : 'Try again →';
   nb.disabled=false; nb.style.opacity='1'; nb.style.cursor='pointer';
@@ -735,8 +1061,10 @@ var PHRASE_DATA={
     {t:'죄송합니다',p:'joesonghamnida',e:'I’m sorry'},
     {t:'괜찮아요',p:'gwaenchanayo',e:'It’s okay / I’m fine'},
     {t:'처음 뵙겠습니다',p:'cheoeum boepgesseumnida',e:'Nice to meet you'},
+    {t:'좋은 아침이에요',p:'joeun achimieyo',e:'Good morning'},
+    {t:'안녕히 주무세요',p:'annyeonghi jumuseyo',e:'Good night'},
   ],
-  'Dining':[
+  'Food & Dining':[
     {t:'메뉴판 주세요',p:'menyupan juseyo',e:'The menu, please'},
     {t:'이거 주세요',p:'igeo juseyo',e:'I’ll have this, please'},
     {t:'잘 먹겠습니다',p:'jal meokgesseumnida',e:'(said before eating) I will eat well'},
@@ -745,15 +1073,32 @@ var PHRASE_DATA={
     {t:'계산서 주세요',p:'gyesanseo juseyo',e:'The check, please'},
     {t:'물 좀 주세요',p:'mul jom juseyo',e:'Water, please'},
     {t:'하나 더 주세요',p:'hana deo juseyo',e:'One more, please'},
+    {t:'안 매워요?',p:'an maewoyo?',e:'Is it not spicy?'},
+    {t:'저는 채식주의자예요',p:'jeoneun chaesikjuuijayeyo',e:'I am a vegetarian'},
   ],
-  'Getting around':[
+  'Travel':[
     {t:'화장실이 어디예요?',p:'hwajangsiri eodiyeyo?',e:'Where is the bathroom?'},
     {t:'여기가 어디예요?',p:'yeogiga eodiyeyo?',e:'Where am I?'},
-    {t:'이 버스 시청에 가요?',p:'i beoseu sicheonge gayo?',e:'Does this bus go to City Hall?'},
     {t:'얼마예요?',p:'eolmayeyo?',e:'How much is it?'},
+    {t:'길을 잃었어요',p:'gireul ireosseoyo',e:'I’m lost'},
+    {t:'표 한 장 주세요',p:'pyo han jang juseyo',e:'One ticket, please'},
+    {t:'왼쪽으로 가세요',p:'oenjjogeuro gaseyo',e:'Go left'},
+    {t:'오른쪽으로 가세요',p:'oreunjjogeuro gaseyo',e:'Go right'},
+    {t:'직진하세요',p:'jikjinhaseyo',e:'Go straight'},
+    {t:'다 왔어요',p:'da wasseoyo',e:'We’ve arrived'},
+    {t:'여권을 보여 주세요',p:'yeogwoneul boyeo juseyo',e:'Please show your passport'},
+  ],
+  'Transport':[
     {t:'택시를 불러 주세요',p:'taeksireul bulleo juseyo',e:'Please call a taxi'},
     {t:'여기서 내려 주세요',p:'yeogiseo naeryeo juseyo',e:'Please let me off here'},
-    {t:'길을 잃었어요',p:'gireul ireosseoyo',e:'I’m lost'},
+    {t:'이 버스 시청에 가요?',p:'i beoseu sicheonge gayo?',e:'Does this bus go to City Hall?'},
+    {t:'다음 역이 어디예요?',p:'daeum yeogi eodiyeyo?',e:'What is the next station?'},
+    {t:'여기로 가 주세요',p:'yeogiro ga juseyo',e:'Please take me here (to a taxi driver)'},
+    {t:'환승해야 돼요?',p:'hwanseunghaeya dwaeyo?',e:'Do I need to transfer?'},
+    {t:'공항까지 얼마나 걸려요?',p:'gonghangkkaji eolmana geollyeoyo?',e:'How long to the airport?'},
+    {t:'막차가 몇 시예요?',p:'makchaga myeot siyeyo?',e:'What time is the last train/bus?'},
+    {t:'교통카드 어디서 사요?',p:'gyotongkadeu eodiseo sayo?',e:'Where do I buy a transit card?'},
+    {t:'천천히 가 주세요',p:'cheoncheonhi ga juseyo',e:'Please drive slowly'},
   ],
   'Shopping':[
     {t:'이거 얼마예요?',p:'igeo eolmayeyo?',e:'How much is this?'},
@@ -762,8 +1107,60 @@ var PHRASE_DATA={
     {t:'카드 돼요?',p:'kadeu dwaeyo?',e:'Do you take cards?'},
     {t:'이거 살게요',p:'igeo salgeyo',e:'I’ll buy this'},
     {t:'다른 색 있어요?',p:'dareun saek isseoyo?',e:'Do you have another color?'},
+    {t:'다른 사이즈 있어요?',p:'dareun saijeu isseoyo?',e:'Do you have another size?'},
+    {t:'좀 깎아 주세요',p:'jom kkakka juseyo',e:'Please give me a discount'},
+    {t:'환불하고 싶어요',p:'hwanbulhago sipeoyo',e:'I’d like a refund'},
+    {t:'봉투 주세요',p:'bongtu juseyo',e:'A bag, please'},
   ],
-  'Emergencies & help':[
+  'Social':[
+    {t:'이름이 뭐예요?',p:'ireumi mwoyeyo?',e:'What is your name?'},
+    {t:'제 이름은 ...예요',p:'je ireumeun ...yeyo',e:'My name is ...'},
+    {t:'어느 나라 사람이에요?',p:'eoneu nara saramieyo?',e:'What country are you from?'},
+    {t:'저는 미국 사람이에요',p:'jeoneun miguk saramieyo',e:'I am American'},
+    {t:'몇 살이에요?',p:'myeot sarieyo?',e:'How old are you?'},
+    {t:'취미가 뭐예요?',p:'chwimiga mwoyeyo?',e:'What is your hobby?'},
+    {t:'연락처 좀 알려 주세요',p:'yeollakcheo jom allyeo juseyo',e:'Please give me your contact info'},
+    {t:'또 만나요',p:'tto mannayo',e:'See you again'},
+    {t:'재미있었어요',p:'jaemiisseosseoyo',e:'That was fun'},
+    {t:'축하해요',p:'chukhahaeyo',e:'Congratulations'},
+  ],
+  'Daily Life':[
+    {t:'몇 시예요?',p:'myeot siyeyo?',e:'What time is it?'},
+    {t:'오늘 무슨 요일이에요?',p:'oneul museun yoirieyo?',e:'What day is it today?'},
+    {t:'날씨가 좋아요',p:'nalssiga joayo',e:'The weather is nice'},
+    {t:'저는 피곤해요',p:'jeoneun pigonhaeyo',e:'I am tired'},
+    {t:'배고파요',p:'baegopayo',e:'I am hungry'},
+    {t:'졸려요',p:'jollyeoyo',e:'I am sleepy'},
+    {t:'다녀오겠습니다',p:'danyeoogesseumnida',e:'(leaving home) I’m off / see you later'},
+    {t:'다녀왔습니다',p:'danyeowatseumnida',e:'(arriving home) I’m back'},
+    {t:'수고하셨습니다',p:'sugohasyeotseumnida',e:'Thanks for your hard work'},
+    {t:'조심하세요',p:'josimhaseyo',e:'Be careful'},
+  ],
+  'Work':[
+    {t:'회의가 몇 시예요?',p:'hoeuiga myeot siyeyo?',e:'What time is the meeting?'},
+    {t:'이메일 보내 드릴게요',p:'imeil bonae deurilgeyo',e:'I’ll send you an email'},
+    {t:'오늘까지 끝내야 돼요',p:'oneulkkaji kkeutnaeya dwaeyo',e:'It has to be finished by today'},
+    {t:'잠깐 시간 있으세요?',p:'jamkkan sigan isseuseyo?',e:'Do you have a moment?'},
+    {t:'제가 확인해 볼게요',p:'jega hwaginhae bolgeyo',e:'I’ll check on it'},
+    {t:'죄송하지만 늦을 것 같아요',p:'joesonghajiman neujeul geot gatayo',e:'Sorry, I think I’ll be late'},
+    {t:'명함 있으세요?',p:'myeongham isseuseyo?',e:'Do you have a business card?'},
+    {t:'오늘 휴가예요',p:'oneul hyugayeyo',e:'I’m on vacation today'},
+    {t:'월급날이에요',p:'wolgeupnarieyo',e:'It’s payday'},
+    {t:'수고 많으셨어요',p:'sugo manheusyeosseoyo',e:'Great work today'},
+  ],
+  'Relationships':[
+    {t:'사랑해요',p:'saranghaeyo',e:'I love you'},
+    {t:'보고 싶어요',p:'bogo sipeoyo',e:'I miss you'},
+    {t:'저랑 결혼해 줄래요?',p:'jerang gyeolhonhae jullaeyo?',e:'Will you marry me?'},
+    {t:'우리 친구 해요',p:'uri chingu haeyo',e:'Let’s be friends'},
+    {t:'저 남자친구 있어요',p:'jeo namjachingu isseoyo',e:'I have a boyfriend'},
+    {t:'저 여자친구 있어요',p:'jeo yeojachingu isseoyo',e:'I have a girlfriend'},
+    {t:'가족이 몇 명이에요?',p:'gajogi myeot myeongieyo?',e:'How many are in your family?'},
+    {t:'저는 형제가 없어요',p:'jeoneun hyeongjega eopseoyo',e:'I don’t have siblings'},
+    {t:'화해해요',p:'hwahaehaeyo',e:'Let’s make up'},
+    {t:'같이 있어 줘서 고마워요',p:'gachi isseo jwoseo gomawoyo',e:'Thank you for being with me'},
+  ],
+  'Emergencies & Help':[
     {t:'도와주세요',p:'dowajuseyo',e:'Please help me'},
     {t:'한국어를 잘 못해요',p:'hangugeoreul jal motaeyo',e:'I don’t speak Korean well'},
     {t:'영어 할 수 있어요?',p:'yeongeo hal su isseoyo?',e:'Can you speak English?'},
@@ -771,12 +1168,15 @@ var PHRASE_DATA={
     {t:'천천히 말해 주세요',p:'cheoncheonhi malhae juseyo',e:'Please speak slowly'},
     {t:'병원에 가야 돼요',p:'byeongwone gaya dwaeyo',e:'I need to go to the hospital'},
     {t:'무슨 뜻이에요?',p:'museun tteusieyo?',e:'What does that mean?'},
+    {t:'경찰을 불러 주세요',p:'gyeongchareul bulleo juseyo',e:'Please call the police'},
+    {t:'지갑을 잃어버렸어요',p:'jigabeul ireobeoryeosseoyo',e:'I lost my wallet'},
+    {t:'여기가 아파요',p:'yeogiga apayo',e:'It hurts here'},
   ],
 };
 function renderBank(){renderBankWords();renderPhrasesPicker();}
 var bankActiveCat='nouns';
-var BANK_CATS=['nouns','verbs','descriptors','feelings','time','modals','questions','conditionals'];
-var BANK_CAT_LABEL={nouns:'Nouns',verbs:'Verbs',descriptors:'Descriptors',feelings:'Feelings',time:'Time',modals:'Modals',questions:'Questions',conditionals:'Connectors'};
+var BANK_CATS=['nouns','verbs','descriptors','feelings','time','modals','questions','conditionals','particles'];
+var BANK_CAT_LABEL={nouns:'Nouns',verbs:'Verbs',descriptors:'Descriptors',feelings:'Feelings',time:'Time',modals:'Modals',questions:'Questions',conditionals:'Connectors',particles:'Particles'};
 function showBankTab(tab){
   document.getElementById('bank-tab-words').classList.toggle('on',tab==='words');
   document.getElementById('bank-tab-phrases').classList.toggle('on',tab==='phrases');
@@ -794,12 +1194,14 @@ function renderBankWords(){
   renderBankGrid(MASTER_VOCAB.filter(function(w){return w.cat===bankActiveCat;}));
 }
 function setBankCat(c){bankActiveCat=c;renderBankWords();}
+var _bankShown=[];
 function renderBankGrid(list){
+  _bankShown=list;
   var grid=document.getElementById('bank-grid');
   var h='<div class="bank-grid">';
   for(var i=0;i<list.length;i++){
     var w=list[i];
-    h+='<div class="bank-card" onclick="speakKorean(\''+w.t.replace(/'/g,"\\'")+'\')"><div class="bt">'+w.t+'</div><div class="bp">'+w.p+'</div><div class="be">'+w.e+'</div></div>';
+    h+='<div class="bank-card" onclick="openWordModal(_bankShown['+i+'])"><div class="bt">'+w.t+'</div><div class="bp">'+w.p+'</div><div class="be">'+w.e+'</div></div>';
   }
   h+='</div>';
   grid.innerHTML=h;
@@ -933,8 +1335,8 @@ function renderOppQuestion(){
       if(oppAnswered)return; oppAnswered=true;
       var all=el.querySelectorAll('.opp-btn'); for(var k=0;k<all.length;k++)all[k].disabled=true;
       oppTotal++;
-      if(o.t===correct.t){oppScore++;xp+=5;updateXP();b.classList.add('correct');document.getElementById('opp-result').innerHTML='<span style="color:var(--green)">Correct! ✓</span>';}
-      else{b.classList.add('wrong');document.getElementById('opp-result').innerHTML='<span style="color:var(--red)">The answer was '+correct.t+'</span>';}
+      if(o.t===correct.t){oppScore++;xp+=5;updateXP();b.classList.add('correct');playCorrect();document.getElementById('opp-result').innerHTML='<span style="color:var(--green)">Correct! ✓</span>';}
+      else{b.classList.add('wrong');playWrong();document.getElementById('opp-result').innerHTML='<span style="color:var(--red)">The answer was '+correct.t+'</span>';}
       document.getElementById('opp-next').style.display='block';
     };
     el.appendChild(b);
@@ -1039,8 +1441,8 @@ function renderConvo(){
     b.onclick=function(){
       if(convoAnswered)return; convoAnswered=true; convoTotal++;
       var all=optsEl.querySelectorAll('.qbtn'); for(var k=0;k<all.length;k++)all[k].disabled=true;
-      if(txt===blankLine.t){convoScore++;xp+=5;updateXP();b.classList.add('correct');document.getElementById('convo-result').innerHTML='<span style="color:var(--green)">Correct! ✓</span>';}
-      else{b.classList.add('wrong');document.getElementById('convo-result').innerHTML='<span style="color:var(--red)">Correct answer: '+blankLine.t+'</span>';}
+      if(txt===blankLine.t){convoScore++;xp+=5;updateXP();b.classList.add('correct');playCorrect();document.getElementById('convo-result').innerHTML='<span style="color:var(--green)">Correct! ✓</span>';}
+      else{b.classList.add('wrong');playWrong();document.getElementById('convo-result').innerHTML='<span style="color:var(--red)">Correct answer: '+blankLine.t+'</span>';}
       document.getElementById('convo-next').style.display='block';
     };
     optsEl.appendChild(b);
@@ -1111,9 +1513,10 @@ function checkBuilder(){
   var target=s.words.map(function(w){return w.t;}).join('');
   sbTotal++;
   if(built===target){
-    sbCorrect++; xp+=10; updateXP();
+    sbCorrect++; xp+=10; updateXP(); playCorrect();
     document.getElementById('gb-result').innerHTML='<span style="color:var(--green)">Correct! ✓</span>';
   } else {
+    playWrong();
     document.getElementById('gb-result').innerHTML='<span style="color:var(--red)">Not quite — correct order: '+s.words.map(function(w){return w.t;}).join(' ')+'</span>';
   }
   document.getElementById('gb-score').textContent='Score: '+sbCorrect+' / '+sbTotal;
@@ -1162,17 +1565,18 @@ function matchTap(item,btn){
   if(matchSel.item===item){ matchSel.btn.classList.remove('selected'); matchSel=null; return; }
   if(matchSel.item.t===item.t){
     matchSel.item.matched=true; item.matched=true; matchFound++;
-    xp+=3; updateXP();
+    xp+=3; updateXP(); playCorrect();
     renderMatchGrid();
     matchSel=null;
     document.getElementById('match-score').textContent='Matched '+matchFound+' / '+matchTotal;
     if(matchFound>=matchTotal){
       clearInterval(matchTimer);
+      playLevelUp();
       document.getElementById('match-result').innerHTML='<span style="color:var(--green)">Round complete! ✓</span>';
       setTimeout(function(){ matchTimeLeft=Math.min(30,matchTimeLeft+15); document.getElementById('match-result').textContent=''; runMatchRound(); },1200);
     }
   } else {
-    btn.classList.add('wrong-flash'); matchSel.btn.classList.add('wrong-flash');
+    btn.classList.add('wrong-flash'); matchSel.btn.classList.add('wrong-flash'); playWrong();
     var a=matchSel.btn,bb=btn;
     setTimeout(function(){a.classList.remove('wrong-flash','selected');bb.classList.remove('wrong-flash');},350);
     matchSel=null;
@@ -1216,8 +1620,8 @@ function renderFlashCard(){
     b.onclick=function(){
       if(flashAnswered)return; flashAnswered=true;
       var all=el.querySelectorAll('.fc-btn'); for(var k=0;k<all.length;k++)all[k].disabled=true;
-      if(o.e===item.e){flashScore++;xp+=4;updateXP();b.classList.add('correct');document.getElementById('fc-result').innerHTML='<span style="color:var(--green)">Correct! ✓</span>';}
-      else{b.classList.add('wrong');document.getElementById('fc-result').innerHTML='<span style="color:var(--red)">Answer: '+item.e+'</span>';}
+      if(o.e===item.e){flashScore++;xp+=4;updateXP();b.classList.add('correct');playCorrect();document.getElementById('fc-result').innerHTML='<span style="color:var(--green)">Correct! ✓</span>';}
+      else{b.classList.add('wrong');playWrong();document.getElementById('fc-result').innerHTML='<span style="color:var(--red)">Answer: '+item.e+'</span>';}
       document.getElementById('fc-next').style.display='block';
     };
     el.appendChild(b);
@@ -1551,7 +1955,7 @@ function grtRenderSentence(){
 function grtCreateNode(word,depth,idx,isWrong){
   var el=document.createElement('div');el.className='grt-node s-'+word.s;el.style.animationDelay=(idx*0.07)+'s';
   el.innerHTML='<div class="nt">'+word.t+'</div><div class="np">'+word.p+'</div><div class="ne">'+word.e+'</div><div class="ns">'+word.s+'</div>';
-  el.onclick=isWrong?function(){grtTapWrong(el);}:function(){speakKorean(word.t);grtTapNode(depth,word,el);};
+  el.onclick=isWrong?function(){grtTapWrong(el);}:function(){playTap();speakKorean(word.t);grtTapNode(depth,word,el);};
   return el;
 }
 function grtShowBranches(depth){
@@ -1565,7 +1969,7 @@ function grtShowBranches(depth){
   grtGrow.appendChild(row);grtRows.push(rd);
   setTimeout(function(){grtGrow.scrollTop=grtGrow.scrollHeight;},50);
 }
-function grtTapWrong(el){el.classList.add('wrong','revealed');el.style.pointerEvents='none';if(grtMode==='game'){grtGameTotal++;grtUpdateScore();}}
+function grtTapWrong(el){el.classList.add('wrong','revealed');el.style.pointerEvents='none';playWrong();if(grtMode==='game'){grtGameTotal++;grtUpdateScore();}}
 function grtTapNode(depth,word,el){
   var ri=-1;for(var i=0;i<grtRows.length;i++){if(grtRows[i].depth===depth){ri=i;break;}}if(ri===-1)return;
   var row=grtRows[ri];
@@ -1605,16 +2009,56 @@ function showVictory(){
   var img=pick(_winImgs);
   document.getElementById('victory-img').style.backgroundImage="url('"+img+"')";
   document.getElementById('victory-overlay').style.display='flex';
+  playVictoryFanfare();
 }
 function closeVictory(){document.getElementById('victory-overlay').style.display='none';}
 function showFailure(){
   var img=pick(_loseImgs);
   document.getElementById('failure-img').style.backgroundImage="url('"+img+"')";
   document.getElementById('failure-overlay').style.display='flex';
+  playFailBuzz();
 }
 function closeFailure(){document.getElementById('failure-overlay').style.display='none';}
 function closeModal(){document.getElementById('modal-bg').classList.remove('open');}
 function openModal(html){document.getElementById('modal-body').innerHTML=html;document.getElementById('modal-bg').classList.add('open');}
+
+/* ---------- word-tap example-sentence modal ---------- */
+function openWordModal(v){
+  playTap();
+  var found=null;
+  for(var i=0;i<grammarLevels.length&&!found;i++){
+    var pats=grammarLevels[i].patterns;
+    for(var p=0;p<pats.length&&!found;p++){
+      var exs=pats[p].examples;
+      for(var e=0;e<exs.length&&!found;e++){
+        if(exs[e].words.some(function(w){return w.t===v.t;}))found=exs[e];
+      }
+    }
+  }
+  var h='<div style="display:flex;align-items:center;gap:10px;margin-bottom:4px">'+
+    '<div style="font-size:32px;font-weight:500">'+v.t+'</div>'+
+    '<button onclick="speakKorean(\''+v.t.replace(/'/g,"\\'")+'\')" style="background:var(--purple-bg);border:1.5px solid var(--purple-dim);cursor:pointer;padding:6px 12px;border-radius:20px;color:var(--purple);display:flex;align-items:center">'+svgI('speaker',14)+'</button>'+
+    '</div>'+
+    '<div style="font-size:16px;color:var(--purple);font-weight:600;margin-bottom:2px">'+v.p+'</div>'+
+    '<div style="font-size:14px;color:var(--text2);margin-bottom:14px">'+v.e+'</div>';
+  if(found){
+    h+='<div style="font-size:11px;font-weight:700;color:var(--purple);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">EXAMPLE SENTENCE</div>';
+    if(GRAMMAR_IMGS[found.phon])h+=GRAMMAR_IMGS[found.phon];
+    h+='<div class="card-sm"><div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">'+
+       '<div class="s-thai" style="flex:1;margin-bottom:0">'+found.thai+'</div>'+
+       '<button onclick="speakKorean(\''+found.thai.replace(/'/g,"\\'")+'\')" style="background:var(--purple-bg);border:1.5px solid var(--purple-dim);cursor:pointer;padding:4px 10px;border-radius:20px;color:var(--purple);flex-shrink:0;display:flex;align-items:center">'+svgI('speaker',14)+'</button></div>'+
+       '<div class="s-phon">'+found.phon+'</div><div class="s-eng">'+found.eng+'</div>';
+    h+='<div class="word-row">';
+    for(var w=0;w<found.words.length;w++){
+      var wd=found.words[w];
+      h+='<div class="word-chip '+wd.c+'"><div class="wt">'+wd.t+'</div><div class="wp">'+wd.p+'</div><div class="we">'+wd.e+'</div></div>';
+    }
+    h+='</div></div>';
+  } else {
+    h+='<div style="font-size:13px;color:var(--text3);padding:8px 0">No example sentence yet</div>';
+  }
+  openModal(h);
+}
 
 var onboardSteps=[
   {title:'환영합니다! (Welcome!)',body:'KoreanLang teaches real, everyday Korean through five progressive levels — grammar, quizzes, games, and a sentence-growing tool called GrowKOR.'},

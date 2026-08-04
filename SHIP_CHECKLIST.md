@@ -12,13 +12,15 @@ JapanLang's current (much more iterated) production app — see note at the bott
 
 | # | Item | Status |
 |---|------|--------|
-| 0.1 | 5 levels of real grammar content (6 patterns × 2 examples each) | ✅ Done |
-| 0.2 | 150 master vocabulary words across 5 levels (30/level) | ✅ Done |
+| 0.1 | 5 levels of real grammar content (6 patterns × 2 examples each), each example illustrated with a custom SVG scene | ✅ Done |
+| 0.2 | 294 master vocabulary words across 5 levels and 9 categories (incl. `particles`) | ✅ Done |
 | 0.3 | 3 quiz modes per level (Translation, Phonetics, Word Match), 7/10 to pass | ✅ Done |
 | 0.4 | GrowKOR sentence-builder engine, 7 themed pools (~30 words each) | ✅ Done |
 | 0.5 | 5 games: Sentence Builder, Opposite Game (40 pairs), Conversation Fill (15), Word Match, Flashcards | ✅ Done |
-| 0.6 | Word Bank + Phrase Bank (5 categories, ~35 phrases) | ✅ Done |
+| 0.6 | Word Bank (294 words, 9 categories) + Phrase Bank (100 phrases, 10 categories), word-tap modal with example sentence + illustration | ✅ Done |
 | 0.7 | XP / streak / level-unlock persistence via localStorage | ✅ Done |
+| 0.8 | Web Audio sound effects (tap/correct/wrong/level-up/victory/fail), no audio assets needed | ✅ Done |
+| 0.9 | Repo pushed to `github.com/cherrypow/koreanlang` (`main`) | ✅ Done |
 
 ---
 
@@ -47,19 +49,20 @@ JapanLang's current (much more iterated) production app — see note at the bott
 
 ## GATE 3 — Visual assets (real design work still needed)
 
-Unlike JapanLang, this build has **no photographic/illustrated artwork** — no image
-generation tool was available this session. Everything is CSS gradients + inline SVG,
-which is fully functional but visually plain compared to JapanLang's road/level-card
-home screen. Before public launch:
+Grammar examples are now illustrated (60/60, via a reusable SVG actor/prop builder — see
+`gsWrap`/`gsActor`/`gs*` functions in `app.js`), and the home/level cards use a shared
+`svgI()` line-icon set. What's still missing is **photographic/illustrated** artwork —
+no image generation tool was available this session:
 
 | # | Item | Status |
 |---|------|--------|
 | 3.1 | Real app icon (current one is a placeholder taegeuk circle, programmatically drawn) | ⬜ Placeholder only |
-| 3.2 | Home screen illustration (`home-bg.png` style road/level art, per Phase 2 of the launch checklist) | ⬜ Not started — currently a plain gradient + level-card list |
+| 3.2 | Home screen illustration (`home-bg.png` style road/level art, per Phase 2 of the launch checklist) | ⬜ Not started — currently CSS gradient + SVG icon-badge level cards |
 | 3.3 | Section background texture (`section-bg.png` equivalent) | ⬜ Not started — currently a radial gradient |
 | 3.4 | Mascot / victory / failure art reviewed — currently simple inline SVGs, functional but basic | ⬜ Review recommended |
-| 3.5 | iPhone 6.5" screenshots (3 minimum) | ⬜ Not done |
-| 3.6 | App Store description / keywords / subtitle written (template in `langapp_launch_process.md` Phase 8) | ⬜ Not done |
+| 3.5 | Grammar example illustrations — reviewed for grammatical/cultural accuracy by a native speaker | ⬜ Not done (60 auto-composed scenes, not hand-reviewed) |
+| 3.6 | iPhone 6.5" screenshots (3 minimum) | ⬜ Not done |
+| 3.7 | App Store description / keywords / subtitle written (template in `langapp_launch_process.md` Phase 8) | ⬜ Not done |
 
 ---
 
@@ -86,20 +89,30 @@ Audio is not blocking for v1 submission — ship without it and add in an update
 | 5.1 | Bundle ID `com.cherrypow.koreanlang` set in `capacitor.config.json`, `Info.plist`, `project.pbxproj` | ✅ Done |
 | 5.2 | `codemagic.yaml` environment group renamed to `AppKoreanLang` | ✅ Done — **create this group in Codemagic before first CI run** |
 | 5.3 | `npm install && npm run build && npx cap sync ios` runs clean | ⬜ Not verified (needs Node/Xcode environment) |
-| 5.4 | GitHub repo `cherrypow/koreanlang` created and pushed | ⬜ **Not done — no push was made this session** |
+| 5.4 | GitHub repo `cherrypow/koreanlang` created and pushed | ✅ Done |
 | 5.5 | App Store Connect app record created | ⬜ Not done |
 
 ---
 
-## Note on scope vs. JapanLang
+## Note on scope vs. ManLang / JapanLang
 
-JapanLang's current `app.js` (616 KB) reflects many iterations beyond its original launch —
-extra mini-games (Koi Fish, Samurai Sneak, Monk Memory, Sentence Rain, Tense Transformer,
-Question Builder, Days & Months), accumulated bug fixes, and a hand-illustrated home
-screen. Reproducing all of that verbatim for Korean in one pass wasn't feasible, so this
-build implements the **checklist's actual Phase 1–3 spec** faithfully — grammar, GrowKOR,
-quiz, games, bank — with original Korean content, rather than a line-by-line port. Treat
-this as a solid v1 foundation, not a finished, launch-ready parity clone.
+ManLang and JapanLang's current `app.js` files reflect many iterations beyond their
+original launch — a HardScan against ManLang (2026-08-04) found these systems still not
+ported to KoreanLang:
+
+| System | ManLang has it as... | Status |
+|---|---|---|
+| Arcade minigames | Bamboo Rain, Panda Climb, Lantern Catch, Dragon Whisper, Wall Builder (quiz-mode-3 games) | ⬜ Not ported — v1.1+ backlog |
+| Extra grammar page types | Speed Round, Listen & Repeat, Sentence Grow (paginated-lesson bonus pages) | ⬜ Not ported — v1.1+ backlog |
+| Home road art | Photographic `home-bg1.png` with baked-in level cards + absolutely-positioned tap zones | ⬜ Not ported — needs real illustration; using SVG-badge cards instead |
+| Tense Transformer / Question Builder | Extra Games-tab entries beyond the 5 already in KoreanLang | ⬜ Not ported — v1.1+ backlog |
+| Calendar (Days & Months) game | Separate Games-tab entry | ⬜ Not ported — v1.1+ backlog |
+
+Ported this session (originally missing, found via the same HardScan): Web Audio sound
+effects, the word-tap example-sentence modal, GRAMMAR_IMGS SVG illustrations (60/60), and
+word/phrase bank expansion to ManLang's scale (294 words / 100 phrases). See
+`langapp_launch_process.md` for the conditions this HardScan added to the master checklist
+for future language apps.
 
 ---
 
