@@ -957,7 +957,7 @@ function vocabUpTo(lv){return MASTER_VOCAB.filter(function(w){return w.lv<=lv;})
 /* ============================================================
    QUIZ ENGINE — 3 modes per level: Translation, Phonetics, Match
    ============================================================ */
-var QUIZ_MODE_LABEL={1:'Translation',2:'Phonetics',3:'Word Match'};
+var QUIZ_MODE_LABEL={1:'Translation',2:'Phonetics',3:'Word Recall'};
 var quizLevel=1, quizMode=1, quizQueue=[], quizIdx=0, quizScore=0, quizAnswered=false;
 
 function startQuiz(lv){
