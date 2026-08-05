@@ -644,12 +644,14 @@ function renderHomeRoad(){
     return;
   }
   _homeRtTries=0;
-  // Card Y-centres as % of the generated art's NATURAL height (home-bg1.png, 853×1844),
-  // measured directly off the source image's card borders. Converted to on-screen % via
-  // toY() below to correct for object-fit:cover cropping on viewports whose aspect ratio
-  // differs from the art's — a raw % mismatch here is what makes locks land between cards.
-  var centers=[35.9,48.5,61.8,74.3,86.5];
-  var statY=19.3;
+  // Card Y-centres as % of the generated art's NATURAL height (home-bg1.png, 853×1654 —
+  // the header band was compressed to bring the art's aspect ratio close to a real phone's
+  // content-area aspect ratio, so Level 5 doesn't get cropped off by object-fit:cover on
+  // device viewports shorter than a full 844px), measured directly off the source image's
+  // card borders. Still converted through toY() below since aspect ratios never match
+  // exactly — a raw % mismatch here is what makes locks land between cards instead of on them.
+  var centers=[28.57,42.62,57.44,71.34,84.95];
+  var statY=14.18;
   var cW=el.clientWidth, cH=el.clientHeight, nW=img.naturalWidth, nH=img.naturalHeight;
   var scale=Math.max(cW/nW, cH/nH);
   function toY(p){ return (p/100)*nH*scale/cH*100; }
