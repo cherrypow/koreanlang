@@ -747,46 +747,36 @@ function renderHome(){
   if(bg){
     if(!bg.src.match(/home-bg1/)){bg.src='home-bg1.png';}
     bg.style.display='block';
-    var _prev=bg.onload;
-    bg.onload=function(){if(_prev)_prev();_homeRtTries=0;requestAnimationFrame(renderHomeRoad);};
   }
-  _homeRtTries=0;
   renderHomeRoad();
   document.getElementById('sec-home').style.visibility='visible';
   var splash=document.getElementById('splash-screen');
   if(splash){splash.style.opacity='0';setTimeout(function(){splash.style.display='none';},650);}
 }
-var _homeRtTries=0;
 function renderHomeRoad(){
   var el=document.getElementById('home-road');
   if(!el)return;
   var img=document.getElementById('home-bg-img');
   if(!img)return;
-  if(!el.clientWidth||!el.clientHeight||!img.naturalHeight){
-    if(_homeRtTries<30){_homeRtTries++;requestAnimationFrame(renderHomeRoad);}
-    return;
-  }
-  _homeRtTries=0;
-  // Card Y-centres as % of the generated art's NATURAL height (home-bg1.png, 853×1654 —
-  // the header band was compressed to bring the art's aspect ratio close to a real phone's
-  // content-area aspect ratio, so Level 5 doesn't get cropped off by object-fit:cover on
-  // device viewports shorter than a full 844px), measured directly off the source image's
-  // card borders. Still converted through toY() below since aspect ratios never match
-  // exactly — a raw % mismatch here is what makes locks land between cards instead of on them.
-  var centers=[28.57,43.42,58.84,73.34,87.55];
+  // #home-art (the shared parent of both the <img> and this overlay) is CSS-locked to the
+  // art's exact 853:1654 aspect ratio, so a percentage here always lands at that same
+  // percentage of the actual image on every device — measured directly off home-bg1.png's
+  // card borders, no runtime cropping-correction math needed (that was the source of the
+  // repeated drift: it was guessing how much object-fit:cover would crop on an unknown
+  // viewport instead of just removing the cropping).
+  var centers=[28.26,42.92,57.29,71.49,85.25];
   var statY=14.18;
-  var cW=el.clientWidth, cH=el.clientHeight, nW=img.naturalWidth, nH=img.naturalHeight;
-  var scale=Math.max(cW/nW, cH/nH);
-  function toY(p){ return (p/100)*nH*scale/cH*100; }
-  function toX(p){ var offX=(nW*scale-cW)/2; return ((p/100)*nW*scale-offX)/cW*100; }
-  var iconX=25.2; // % of natural width — the level icon circle's centre in home-bg1.png
+  var iconX=25.2; // % of width — the level icon circle's centre in home-bg1.png
 
   var h='';
-  h+='<div onclick="devTap()" style="position:absolute;top:2%;left:20%;width:60%;height:'+toY(33)+'%;z-index:4;cursor:pointer"></div>';
-  h+='<div style="position:absolute;top:'+toY(statY)+'%;left:5%;width:26%;height:5.5%;z-index:2;display:flex;align-items:center;justify-content:center;gap:5px;background:rgba(10,10,20,0.82);border:1.5px solid rgba(200,50,50,0.5);border-radius:22px;box-shadow:0 2px 14px rgba(0,0,0,0.6)">'
+  // Dev tap zone: bounded to the header art only (0–21%, comfortably above Level 1's card,
+  // which starts at 23.67%) and given the LOWEST z-index of anything on this screen, so even
+  // if the bounds are ever slightly off again, a real level tap always wins.
+  h+='<div onclick="devTap()" style="position:absolute;top:1%;left:20%;width:60%;height:20%;z-index:1;cursor:pointer"></div>';
+  h+='<div style="position:absolute;top:'+statY+'%;left:5%;width:26%;height:5.5%;z-index:2;display:flex;align-items:center;justify-content:center;gap:5px;background:rgba(10,10,20,0.82);border:1.5px solid rgba(200,50,50,0.5);border-radius:22px;box-shadow:0 2px 14px rgba(0,0,0,0.6)">'
     +'<span style="font-size:14px">🔥</span>'
     +'<span style="font-size:15px;font-weight:700;color:#E84030;font-family:inherit" id="stat-streak">'+streak+'</span></div>';
-  h+='<div style="position:absolute;top:'+toY(statY)+'%;right:5%;width:26%;height:5.5%;z-index:2;display:flex;align-items:center;justify-content:center;gap:5px;background:rgba(10,10,20,0.82);border:1.5px solid rgba(200,50,50,0.5);border-radius:22px;box-shadow:0 2px 14px rgba(0,0,0,0.6)">'
+  h+='<div style="position:absolute;top:'+statY+'%;right:5%;width:26%;height:5.5%;z-index:2;display:flex;align-items:center;justify-content:center;gap:5px;background:rgba(10,10,20,0.82);border:1.5px solid rgba(200,50,50,0.5);border-radius:22px;box-shadow:0 2px 14px rgba(0,0,0,0.6)">'
     +'<span style="font-size:12px;font-weight:600;color:#C9333B;font-family:inherit">XP</span>'
     +'<span style="font-size:15px;font-weight:700;color:#E84030;font-family:inherit" id="stat-xp">'+xp+'</span></div>';
 
@@ -794,12 +784,12 @@ function renderHomeRoad(){
     var lv=grammarLevels[i].level;
     var unlocked=isLevelUnlocked(lv);
     var passed=levelPassed(lv);
-    var cy=toY(centers[i]);
-    var hh=toY(centers[i]+4.9)-toY(centers[i]-4.9);
+    var cy=centers[i];
+    var hh=9.6;
     h+='<div onclick="homeLevelTap('+lv+')" style="position:absolute;top:'+(cy-hh/2)+'%;left:5%;right:5%;height:'+hh+'%;cursor:pointer;z-index:3"></div>';
     if(!unlocked&&!devMode){
       h+='<div style="position:absolute;top:'+(cy-hh/2)+'%;left:6%;right:6%;height:'+hh+'%;z-index:3.5;pointer-events:none;background:rgba(5,5,15,.6);border-radius:16px"></div>';
-      h+='<div style="position:absolute;top:'+cy+'%;left:'+toX(iconX)+'%;transform:translate(-50%,-50%);z-index:4;pointer-events:none;width:44px;height:44px;border-radius:50%;background:rgba(0,0,0,.8);border:2px solid rgba(255,255,255,.22);display:flex;align-items:center;justify-content:center;font-size:22px;box-shadow:0 2px 14px rgba(0,0,0,.7)">🔒</div>';
+      h+='<div style="position:absolute;top:'+cy+'%;left:'+iconX+'%;transform:translate(-50%,-50%);z-index:4;pointer-events:none;width:44px;height:44px;border-radius:50%;background:rgba(0,0,0,.8);border:2px solid rgba(255,255,255,.22);display:flex;align-items:center;justify-content:center;font-size:22px;box-shadow:0 2px 14px rgba(0,0,0,.7)">🔒</div>';
     }
     if(passed){
       h+='<div style="position:absolute;top:'+cy+'%;right:7%;transform:translateY(-50%);z-index:4;pointer-events:none;width:26px;height:26px;border-radius:50%;background:#1a7a1a;border:2px solid #fff3;display:flex;align-items:center;justify-content:center;font-size:13px;color:#fff;font-weight:700;box-shadow:0 2px 10px rgba(0,0,0,.6)">✓</div>';
