@@ -15,7 +15,7 @@ var quizPassed={}; // {lv: {mode1:bool, mode2:bool, mode3:bool}}
 var grammarViewed={};
 function saveState(){
   try{
-    localStorage.setItem(KL_KEY, JSON.stringify({xp:xp,streak:streak,lastPlayDate:lastPlayDate,quizPassed:quizPassed,grammarViewed:grammarViewed,gameWinCount:gameWinCount,gamesPassed:gamesPassed,_levelUnlockToastShown:_levelUnlockToastShown,_gamesVocabToastShown:_gamesVocabToastShown,_bankOnboardShown:_bankOnboardShown,_growkorOnboardShown:_growkorOnboardShown}));
+    localStorage.setItem(KL_KEY, JSON.stringify({xp:xp,streak:streak,lastPlayDate:lastPlayDate,quizPassed:quizPassed,grammarViewed:grammarViewed,gameWinCount:gameWinCount,gamesPassed:gamesPassed,_levelUnlockToastShown:_levelUnlockToastShown,_gamesVocabToastShown:_gamesVocabToastShown,_bankOnboardShown:_bankOnboardShown,_growkorOnboardShown:_growkorOnboardShown,_lockNudge:_lockNudge}));
   }catch(e){}
 }
 function loadState(){
@@ -30,8 +30,10 @@ function loadState(){
     _gamesVocabToastShown=d._gamesVocabToastShown||{};
     _bankOnboardShown=d._bankOnboardShown||false;
     _growkorOnboardShown=d._growkorOnboardShown||false;
+    _lockNudge=d._lockNudge||[0,0,0,0,0];
   }catch(e){}
 }
+var _lockNudge=[0,0,0,0,0];
 function updateXP(){ saveState(); }
 function bumpStreak(){
   var today=new Date().toDateString();
@@ -791,8 +793,11 @@ function renderHomeRoad(){
   }
   _homeRtTries=0;
   // Card Y-centres as % of the generated art's NATURAL height (home-bg1.png, 853×1654),
-  // measured directly off the source image's card borders.
+  // measured directly off the source image's card borders. _lockNudge lets dev mode nudge
+  // each one independently and live on a real device, since sub-pixel accuracy here can't be
+  // reliably verified from a screenshot description — see nudgeLock() below.
   var centers=[28.26,42.92,57.29,71.49,85.25];
+  for(var ni=0;ni<centers.length;ni++)centers[ni]+=(_lockNudge[ni]||0);
   var statY=14.18;
   var iconX=25.2; // % of natural width — the level icon circle's centre in home-bg1.png
   var cW=el.clientWidth, cH=el.clientHeight, nW=img.naturalWidth, nH=img.naturalHeight;
@@ -825,12 +830,25 @@ function renderHomeRoad(){
     if(passed){
       h+='<div style="position:absolute;top:'+cy+'%;right:7%;transform:translateY(-50%);z-index:4;pointer-events:none;width:26px;height:26px;border-radius:50%;background:#1a7a1a;border:2px solid #fff3;display:flex;align-items:center;justify-content:center;font-size:13px;color:#fff;font-weight:700;box-shadow:0 2px 10px rgba(0,0,0,.6)">✓</div>';
     }
+    if(devMode){
+      // Calibration reticle + nudge buttons — always shown in dev mode regardless of lock
+      // state, so every level's target position can be tuned live on the actual device,
+      // independently, instead of guessing numbers from a screenshot description.
+      h+='<div style="position:absolute;top:'+cy+'%;left:'+toX(iconX)+'%;transform:translate(-50%,-50%);z-index:6;pointer-events:none;width:44px;height:44px;border-radius:50%;border:2px dashed #4ade80;box-sizing:border-box"></div>';
+      h+='<div style="position:absolute;top:'+cy+'%;left:'+(toX(iconX)+9)+'%;transform:translateY(-50%);z-index:6;display:flex;flex-direction:column;gap:2px">'
+        +'<button onclick="nudgeLock('+i+',-0.15)" style="width:26px;height:22px;border-radius:6px;border:1px solid #4ade80;background:rgba(0,0,0,.8);color:#4ade80;font-size:12px;cursor:pointer;line-height:1">▲</button>'
+        +'<button onclick="nudgeLock('+i+',0.15)" style="width:26px;height:22px;border-radius:6px;border:1px solid #4ade80;background:rgba(0,0,0,.8);color:#4ade80;font-size:12px;cursor:pointer;line-height:1">▼</button>'
+        +'</div>';
+    }
   }
 
   if(devMode){
     h+='<div style="position:absolute;bottom:1.5%;left:4%;right:4%;z-index:5;display:flex;gap:4px;justify-content:center;flex-wrap:wrap;background:rgba(0,0,0,.75);border:1px dashed var(--amber);border-radius:10px;padding:6px">';
     for(var qi=1;qi<=5;qi++)h+='<button onclick="goToQuizLevel('+qi+')" style="padding:4px 10px;border-radius:8px;border:1px solid var(--amber);background:transparent;color:var(--amber);font-size:11px;font-family:inherit;cursor:pointer">Q'+qi+'</button>';
     h+='</div>';
+    h+='<div style="position:absolute;top:0.5%;left:4%;right:4%;z-index:7;background:rgba(0,0,0,.9);border:1px dashed #4ade80;border-radius:10px;padding:6px 8px;font-size:9px;color:#4ade80;font-family:monospace;word-break:break-all;text-align:center">'
+      +'[' + centers.map(function(c){return c.toFixed(2);}).join(',') + ']'
+      +'<div style="color:#8a9;margin-top:3px;font-family:inherit;font-size:9px">↑ nudge each lock with ▲▼, then screenshot this box and send it back</div></div>';
   }
 
   el.innerHTML=h;
@@ -839,6 +857,11 @@ function renderHomeRoad(){
 function homeLevelTap(lv){
   if(devMode||isLevelUnlocked(lv)){ openLevel(lv); }
   else { showLockToast(lv); }
+}
+function nudgeLock(idx,delta){
+  _lockNudge[idx]=(_lockNudge[idx]||0)+delta;
+  saveState();
+  renderHomeRoad();
 }
 function countLevelsPassed(){var c=0;for(var i=1;i<=5;i++)if(levelPassed(i))c++;return c;}
 function goToQuizLevel(lv){quizLevel=lv;quizQueue=[];goTo('quiz');}
