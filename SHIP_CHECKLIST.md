@@ -16,7 +16,7 @@ JapanLang's current (much more iterated) production app — see note at the bott
 | 0.2 | 294 master vocabulary words across 5 levels and 9 categories (incl. `particles`) | ✅ Done |
 | 0.3 | 3 quiz modes per level (Translation, Phonetics, Word Match), 7/10 to pass | ✅ Done |
 | 0.4 | GrowKOR sentence-builder engine, 7 themed pools (~30 words each) | ✅ Done |
-| 0.5 | 5 Games-tab games (Sentence Builder, Opposite Game 40 pairs, Conversation Fill 15, Word Match, Flashcards) + 5 level-specific Test-3 mini-games gating the Quiz (see below) | ✅ Done |
+| 0.5 | 8 Games-tab games (Sentence Builder, Opposite Game 40 pairs, Conversation Fill 15, Word Match, Flashcards, Days & Months, Tense Transformer, Question Builder) + 5 level-specific Test-3 mini-games gating the Quiz (see below) | ✅ Done |
 | 0.6 | Word Bank (294 words, 9 categories) + Phrase Bank (100 phrases, 10 categories), word-tap modal with example sentence + illustration | ✅ Done |
 | 0.7 | XP / streak / level-unlock persistence via localStorage | ✅ Done |
 | 0.8 | Web Audio sound effects (tap/correct/wrong/level-up/victory/fail), no audio assets needed | ✅ Done |
@@ -37,7 +37,7 @@ Games tab into `#sec-quiz` and rewired as each level's Test 3, dispatched by
 | 2 | Falling Rice | 6 caught | 3 missed |
 | 3 | Transfer (환승) | 3 completed sentences | 3 wrong tile taps |
 | 4 | Noraebang 100 (노래방 100) | reach 100점 | 3 misses |
-| 5 | Suneung Mock Exam (수능 모의고사) | 7 correct (same-category distractors) | 5 wrong |
+| 5 | Suneung Mock Exam (수능 모의고사) | survive all 25 questions | 5 wrong (instant fail, anywhere) |
 
 Every game is strike-based (survive until the win target, one miss too many = instant
 "Try again"), all timers route through `qgSetTimeout()` and are cleared by
@@ -65,7 +65,7 @@ illustrations, for visual consistency with the rest of the app.
 |---|------|--------|
 | 2.1 | GrowKOR Pools B–G — play 10 sentences at each level, no nonsense | ⬜ Not done |
 | 2.2 | Every quiz mode completes a full 10-question round without crashing | ⬜ Not done |
-| 2.3 | Word Match timer, Flashcard sets, Opposite Game, Conversation Fill — all playable start to finish | ⬜ Not done |
+| 2.3 | Word Match timer, Flashcard sets, Opposite Game, Conversation Fill, Days & Months, Tense Transformer, Question Builder — all playable start to finish | ⬜ Not done |
 | 2.4 | Level unlock actually gates Level 2–5 correctly (test by passing all 3 quiz modes) | ⬜ Not done |
 | 2.5 | Native speaker review of all Korean text (grammar examples, vocab, GrowKOR pools, phrases) — **strongly recommended before public launch** | ⬜ Not done |
 

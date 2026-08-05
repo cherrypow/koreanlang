@@ -1297,13 +1297,16 @@ function showPhrasesPicker(){
 /* ============================================================
    GAMES — picker + 5 games
    ============================================================ */
-var GAME_IDS=['builder','opposite','convo','match','flash'];
+var GAME_IDS=['builder','opposite','convo','match','flash','calendar','tense','qbuild'];
 var GAME_LIST=[
   {id:'builder',icon:'🧩',title:'Sentence Builder',desc:'Drag words into the correct Korean order'},
   {id:'opposite',icon:'🃏',title:'Opposite Game',desc:'Tap the opposite meaning'},
   {id:'convo',icon:'🗣',title:'Conversation Fill',desc:'Complete the missing line'},
   {id:'match',icon:'🎯',title:'Word Match',desc:'Match Korean to English against the clock'},
   {id:'flash',icon:'⚡',title:'Flashcard Quiz',desc:'Study any category, 10 at a time'},
+  {id:'calendar',icon:'📅',title:'Days & Months',desc:'Learn 요일 (days) and 월 (months)'},
+  {id:'tense',icon:'🔁',title:'Tense Transformer',desc:'Transform sentences into the tense asked'},
+  {id:'qbuild',icon:'❓',title:'Question Builder',desc:'Build Korean questions tile by tile'},
 ];
 function renderGamePicker(){
   document.getElementById('game-picker').style.display='';
@@ -1325,6 +1328,9 @@ function openGame(id){
   if(id==='convo')startConvo();
   if(id==='match')startMatch();
   if(id==='flash'){document.getElementById('flash-picker').style.display='';document.getElementById('flash-quiz').style.display='none';renderFlashCatList();}
+  if(id==='calendar')initCalendarGame();
+  if(id==='tense')initTense();
+  if(id==='qbuild')initQBuild();
 }
 
 /* ---------- Opposite Game ---------- */
@@ -1407,6 +1413,236 @@ function renderOppQuestion(){
   document.getElementById('opp-score').textContent='Score: '+oppScore+' / '+oppTotal;
 }
 function nextOpposite(){oppIdx++;renderOppQuestion();}
+
+/* ---------- Days & Months ---------- */
+var calDays=[
+  {t:'월요일',p:'woryoil',e:'Monday'},{t:'화요일',p:'hwayoil',e:'Tuesday'},
+  {t:'수요일',p:'suyoil',e:'Wednesday'},{t:'목요일',p:'mogyoil',e:'Thursday'},
+  {t:'금요일',p:'geumyoil',e:'Friday'},{t:'토요일',p:'toyoil',e:'Saturday'},
+  {t:'일요일',p:'iryoil',e:'Sunday'},
+];
+var calMonths=[
+  {t:'일월',p:'irwol',e:'January'},{t:'이월',p:'iwol',e:'February'},
+  {t:'삼월',p:'samwol',e:'March'},{t:'사월',p:'sawol',e:'April'},
+  {t:'오월',p:'owol',e:'May'},{t:'유월',p:'yuwol',e:'June'},
+  {t:'칠월',p:'chirwol',e:'July'},{t:'팔월',p:'parwol',e:'August'},
+  {t:'구월',p:'guwol',e:'September'},{t:'시월',p:'siwol',e:'October'},
+  {t:'십일월',p:'sibirwol',e:'November'},{t:'십이월',p:'sibiwol',e:'December'},
+];
+var calMode=null, calScore=0, calTotal=0, calAnswered=false;
+function initCalendarGame(){
+  calMode='days'; calScore=0; calTotal=0;
+  document.getElementById('cal-mode').textContent='Days';
+  nextCalRound();
+}
+function nextCalRound(){
+  calAnswered=false;
+  document.getElementById('cal-result').textContent='';
+  var pool=calMode==='days'?calDays:calMonths;
+  var correct=pool[Math.floor(Math.random()*pool.length)];
+  var wrongs=shuffle(pool.filter(function(w){return w.t!==correct.t;})).slice(0,3);
+  var opts=shuffle([correct].concat(wrongs));
+  var showKR=Math.random()>0.5;
+  var promptEl=document.getElementById('cal-prompt'), optsEl=document.getElementById('cal-opts');
+  if(showKR){
+    promptEl.innerHTML='<div style="font-size:13px;color:var(--text3);margin-bottom:8px;text-transform:uppercase;letter-spacing:.06em">What does this mean?</div><div style="font-size:36px;color:var(--text)">'+correct.t+'</div><div style="font-size:14px;color:var(--purple);font-weight:500;margin-top:4px">'+correct.p+'</div>';
+    optsEl.innerHTML='';
+    opts.forEach(function(w){
+      var b=document.createElement('button'); b.className='qbtn'; b.style.padding='14px'; b.textContent=w.e;
+      b.onclick=function(){pickCal(w.e,correct.e,b);};
+      optsEl.appendChild(b);
+    });
+  } else {
+    promptEl.innerHTML='<div style="font-size:13px;color:var(--text3);margin-bottom:8px;text-transform:uppercase;letter-spacing:.06em">What is this in Korean?</div><div style="font-size:24px;color:var(--text)">'+correct.e+'</div>';
+    optsEl.innerHTML='';
+    opts.forEach(function(w){
+      var b=document.createElement('button'); b.className='qbtn'; b.style.cssText='padding:14px;font-size:16px';
+      b.innerHTML=w.t+'<div style="font-size:10px;color:var(--purple);margin-top:2px">'+w.p+'</div>';
+      b.onclick=function(){pickCal(w.t,correct.t,b);};
+      optsEl.appendChild(b);
+    });
+  }
+  document.getElementById('cal-score').textContent=calScore+' / '+calTotal+' correct';
+}
+function pickCal(picked,correct,btn){
+  if(calAnswered)return; calAnswered=true; calTotal++;
+  var all=document.querySelectorAll('#cal-opts .qbtn'); for(var i=0;i<all.length;i++)all[i].disabled=true;
+  if(picked===correct){
+    calScore++; xp+=5; updateXP(); playCorrect(); btn.classList.add('correct');
+    document.getElementById('cal-result').innerHTML='<span style="color:var(--green)">Correct ✓</span>';
+  } else {
+    playWrong(); btn.classList.add('wrong');
+    all.forEach(function(b){ if(b.textContent.indexOf(correct)!==-1)b.classList.add('correct'); });
+    document.getElementById('cal-result').innerHTML='<span style="color:var(--red)">Incorrect</span>';
+  }
+  document.getElementById('cal-score').textContent=calScore+' / '+calTotal+' correct';
+  if(calTotal===7 && calMode==='days'){
+    setTimeout(function(){calMode='months';calTotal=0;calScore=0;document.getElementById('cal-mode').textContent='Months';nextCalRound();},1200);
+  } else if(calTotal===7 && calMode==='months'){
+    setTimeout(function(){
+      var pct=Math.round(calScore/7*100);
+      document.getElementById('cal-result').innerHTML='<div style="margin-top:8px;font-size:17px;font-weight:700;color:var(--green)">Complete! '+calScore+'/7 ('+pct+'%)</div>';
+      document.getElementById('cal-opts').innerHTML='<button class="qbtn" style="grid-column:1/-1;padding:14px;background:var(--purple-bg);color:var(--purple);border-color:var(--purple-dim)" onclick="initCalendarGame()">Play Again</button>';
+    },1200);
+  } else {
+    setTimeout(nextCalRound,1200);
+  }
+}
+
+/* ---------- Tense Transformer ---------- */
+var TENSE_DATA=[
+  {base:{t:'저는 밥을 먹어요',p:'jeoneun babeul meogeoyo',e:'I eat rice'},
+   forms:{past:{t:'저는 밥을 먹었어요',p:'jeoneun babeul meogeosseoyo'},negative:{t:'저는 밥을 안 먹어요',p:'jeoneun babeul an meogeoyo'},progressive:{t:'저는 밥을 먹고 있어요',p:'jeoneun babeul meokgo isseoyo'},wantTo:{t:'저는 밥을 먹고 싶어요',p:'jeoneun babeul meokgo sipeoyo'}},
+   tasks:[{label:'Make it PAST',key:'past',explain:'Past tense: verb stem + 았/었어요. 먹어요 → 먹었어요.'},
+          {label:'Make it NEGATIVE',key:'negative',explain:'Negative: put 안 right before the verb. 먹어요 → 안 먹어요.'}]},
+  {base:{t:'저는 학교에 가요',p:'jeoneun hakgyoe gayo',e:'I go to school'},
+   forms:{past:{t:'저는 학교에 갔어요',p:'jeoneun hakgyoe gasseoyo'},negative:{t:'저는 학교에 안 가요',p:'jeoneun hakgyoe an gayo'},progressive:{t:'저는 학교에 가고 있어요',p:'jeoneun hakgyoe gago isseoyo'},wantTo:{t:'저는 학교에 가고 싶어요',p:'jeoneun hakgyoe gago sipeoyo'}},
+   tasks:[{label:'Make it PAST',key:'past',explain:'Past tense: 가요 → 갔어요 (아 + 았어요 contracts to 갔어요).'},
+          {label:'Make it PROGRESSIVE',key:'progressive',explain:'Progressive = verb stem + -고 있어요 (happening right now). 가요 → 가고 있어요.'}]},
+  {base:{t:'그는 텔레비전을 봐요',p:'geuneun tellebijeoneul bwayo',e:'He watches TV'},
+   forms:{past:{t:'그는 텔레비전을 봤어요',p:'geuneun tellebijeoneul bwasseoyo'},negative:{t:'그는 텔레비전을 안 봐요',p:'geuneun tellebijeoneul an bwayo'},progressive:{t:'그는 텔레비전을 보고 있어요',p:'geuneun tellebijeoneul bogo isseoyo'},wantTo:{t:'그는 텔레비전을 보고 싶어요',p:'geuneun tellebijeoneul bogo sipeoyo'}},
+   tasks:[{label:'Make it PAST',key:'past',explain:'Past tense: 봐요 → 봤어요.'},
+          {label:'Make it WANT TO',key:'wantTo',explain:'Want to = verb stem + -고 싶어요. 봐요 → 보고 싶어요.'}]},
+  {base:{t:'한국어는 좋아요',p:'hangugeoneun joayo',e:'Korean is good'},
+   forms:{past:{t:'한국어는 좋았어요',p:'hangugeoneun joasseoyo'},negative:{t:'한국어는 안 좋아요',p:'hangugeoneun an joayo'},progressive:{t:'한국어는 좋아요?',p:'hangugeoneun joayo?'},wantTo:{t:'한국어는 안 좋았어요',p:'hangugeoneun an joasseoyo'}},
+   tasks:[{label:'Make it PAST',key:'past',explain:'Past tense: 좋아요 → 좋았어요.'},
+          {label:'Make it NEGATIVE',key:'negative',explain:'Negative: put 안 right before the adjective. 좋아요 → 안 좋아요.'}]},
+  {base:{t:'저는 배고파요',p:'jeoneun baegopayo',e:'I am hungry'},
+   forms:{past:{t:'저는 배고팠어요',p:'jeoneun baegopasseoyo'},negative:{t:'저는 안 배고파요',p:'jeoneun an baegopayo'},progressive:{t:'배고파요?',p:'baegopayo?'},wantTo:{t:'저는 안 배고팠어요',p:'jeoneun an baegopasseoyo'}},
+   tasks:[{label:'Make it PAST',key:'past',explain:'Past tense: 배고파요 → 배고팠어요 (으-irregular stem).'},
+          {label:'Make it NEGATIVE',key:'negative',explain:'Negative: put 안 right before the adjective. 배고파요 → 안 배고파요.'}]},
+  {base:{t:'저는 한국어를 공부해요',p:'jeoneun hangugeoreul gongbuhaeyo',e:'I study Korean'},
+   forms:{past:{t:'저는 한국어를 공부했어요',p:'jeoneun hangugeoreul gongbuhaesseoyo'},negative:{t:'저는 한국어를 공부 안 해요',p:'jeoneun hangugeoreul gongbu an haeyo'},progressive:{t:'저는 한국어를 공부하고 있어요',p:'jeoneun hangugeoreul gongbuhago isseoyo'},wantTo:{t:'저는 한국어를 공부하고 싶어요',p:'jeoneun hangugeoreul gongbuhago sipeoyo'}},
+   tasks:[{label:'Make it PAST',key:'past',explain:'하다 verbs: 해요 → 했어요. 공부해요 → 공부했어요.'},
+          {label:'Make it NEGATIVE',key:'negative',explain:'하다 verbs split: 안 goes before 해요, not before the noun. 공부해요 → 공부 안 해요.'}]},
+  {base:{t:'저는 친구를 만나요',p:'jeoneun chinguleul mannayo',e:'I meet a friend'},
+   forms:{past:{t:'저는 친구를 만났어요',p:'jeoneun chinguleul mannasseoyo'},negative:{t:'저는 친구를 안 만나요',p:'jeoneun chinguleul an mannayo'},progressive:{t:'저는 친구를 만나고 있어요',p:'jeoneun chinguleul mannago isseoyo'},wantTo:{t:'저는 친구를 만나고 싶어요',p:'jeoneun chinguleul mannago sipeoyo'}},
+   tasks:[{label:'Make it PAST',key:'past',explain:'Past tense: 만나요 → 만났어요.'},
+          {label:'Make it PROGRESSIVE',key:'progressive',explain:'Progressive = verb stem + -고 있어요. 만나요 → 만나고 있어요.'}]},
+  {base:{t:'그녀는 물을 마셔요',p:'geunyeoneun mureul masyeoyo',e:'She drinks water'},
+   forms:{past:{t:'그녀는 물을 마셨어요',p:'geunyeoneun mureul masyeosseoyo'},negative:{t:'그녀는 물을 안 마셔요',p:'geunyeoneun mureul an masyeoyo'},progressive:{t:'그녀는 물을 마시고 있어요',p:'geunyeoneun mureul masigo isseoyo'},wantTo:{t:'그녀는 물을 마시고 싶어요',p:'geunyeoneun mureul masigo sipeoyo'}},
+   tasks:[{label:'Make it PAST',key:'past',explain:'Past tense: 마셔요 → 마셨어요.'},
+          {label:'Make it WANT TO',key:'wantTo',explain:'Want to = verb stem + -고 싶어요. 마셔요 → 마시고 싶어요.'}]},
+];
+var gtQueue=[], gtQIdx=0, gtScore=0, gtTotal=0, gtAnswered=false;
+function buildTenseQueue(){
+  var q=[];
+  TENSE_DATA.forEach(function(s){ s.tasks.forEach(function(task){ q.push({s:s,task:task}); }); });
+  return shuffle(q);
+}
+function initTense(){
+  gtQueue=buildTenseQueue(); gtQIdx=0; gtScore=0; gtTotal=0;
+  renderTense();
+}
+function renderTense(){
+  gtAnswered=false;
+  if(gtQIdx>=gtQueue.length){ gtQueue=buildTenseQueue(); gtQIdx=0; }
+  var pair=gtQueue[gtQIdx];
+  var s=pair.s, task=pair.task;
+  document.getElementById('gt-original').textContent=s.base.t;
+  document.getElementById('gt-orig-phon').textContent=s.base.p+' = '+s.base.e;
+  document.getElementById('gt-task').textContent='→ '+task.label;
+  document.getElementById('gt-result').textContent='';
+  document.getElementById('gt-explain').style.display='none';
+  document.getElementById('gt-next').style.display='none';
+  var correctForm=s.forms[task.key];
+  var allForms=Object.keys(s.forms).map(function(k){return s.forms[k];});
+  var opts=shuffle(allForms);
+  var el=document.getElementById('gt-opts'); el.innerHTML='';
+  opts.forEach(function(o){
+    var b=document.createElement('button'); b.className='qbtn';
+    b.style.cssText='display:flex;flex-direction:column;align-items:center;gap:3px;padding:14px 8px;font-size:16px';
+    b.innerHTML='<span>'+o.t+'</span><span style="font-size:11px;color:var(--purple);font-weight:500">'+o.p+'</span>';
+    b.onclick=function(){checkTense(b,o,correctForm);};
+    el.appendChild(b);
+  });
+  document.getElementById('gt-score').textContent='Score: '+gtScore+' / '+gtTotal;
+}
+function checkTense(btn,chosen,correctForm){
+  if(gtAnswered)return; gtAnswered=true; gtTotal++;
+  var all=document.querySelectorAll('#gt-opts .qbtn'); for(var i=0;i<all.length;i++)all[i].disabled=true;
+  var ok=chosen.t===correctForm.t;
+  all.forEach(function(b){
+    var span=b.querySelector('span');
+    var bt=span?span.textContent:b.textContent;
+    if(bt===correctForm.t)b.classList.add('correct');
+    else if(b===btn && !ok)b.classList.add('wrong');
+  });
+  var res=document.getElementById('gt-result');
+  if(ok){ gtScore++; xp+=8; updateXP(); playCorrect(); res.innerHTML='<span style="color:var(--green)">Correct ✓</span>'; }
+  else { playWrong(); res.innerHTML='<span style="color:var(--red)">Incorrect</span>'; }
+  var pair=gtQueue[gtQIdx];
+  document.getElementById('gt-explain').style.display='block';
+  document.getElementById('gt-explain').textContent=pair.task.explain;
+  document.getElementById('gt-score').textContent='Score: '+gtScore+' / '+gtTotal;
+  document.getElementById('gt-next').style.display='block';
+}
+function nextTense(){ gtQIdx++; renderTense(); }
+
+/* ---------- Question Builder ---------- */
+var QB_DATA=[
+  {eng:'What are you eating?',words:[{t:'뭐',p:'mwo'},{t:'먹어요?',p:'meogeoyo?'}],distract:[{t:'가요',p:'gayo'},{t:'어디',p:'eodi'}]},
+  {eng:'Where are you going?',words:[{t:'어디',p:'eodi'},{t:'가요?',p:'gayo?'}],distract:[{t:'뭐',p:'mwo'},{t:'먹어요',p:'meogeoyo'}]},
+  {eng:'Who is that person?',words:[{t:'저',p:'jeo'},{t:'사람은',p:'sarameun'},{t:'누구예요?',p:'nuguyeyo?'}],distract:[{t:'이',p:'i'},{t:'뭐예요?',p:'mwoyeyo?'}]},
+  {eng:'When are you going?',words:[{t:'언제',p:'eonje'},{t:'가요?',p:'gayo?'}],distract:[{t:'어디',p:'eodi'},{t:'왜',p:'wae'}]},
+  {eng:'Why aren’t you going?',words:[{t:'왜',p:'wae'},{t:'안',p:'an'},{t:'가요?',p:'gayo?'}],distract:[{t:'언제',p:'eonje'},{t:'먹어요?',p:'meogeoyo?'}]},
+  {eng:'How much is this?',words:[{t:'이거',p:'igeo'},{t:'얼마예요?',p:'eolmayeyo?'}],distract:[{t:'저거',p:'jeogeo'},{t:'뭐예요?',p:'mwoyeyo?'}]},
+  {eng:'Shall we go together?',words:[{t:'같이',p:'gachi'},{t:'갈까요?',p:'galkkayo?'}],distract:[{t:'혼자',p:'honja'},{t:'먹을까요?',p:'meogeulkkayo?'}]},
+  {eng:'What shall we eat?',words:[{t:'뭐',p:'mwo'},{t:'먹을까요?',p:'meogeulkkayo?'}],distract:[{t:'어디',p:'eodi'},{t:'갈까요?',p:'galkkayo?'}]},
+  {eng:'Can you speak Korean?',words:[{t:'한국어를',p:'hangugeoreul'},{t:'할 수',p:'hal su'},{t:'있어요?',p:'isseoyo?'}],distract:[{t:'영어를',p:'yeongeoreul'},{t:'없어요?',p:'eopseoyo?'}]},
+  {eng:'What is your name?',words:[{t:'이름이',p:'ireumi'},{t:'뭐예요?',p:'mwoyeyo?'}],distract:[{t:'나이가',p:'naiga'},{t:'몇 살이에요?',p:'myeot sarieyo?'}]},
+];
+var qbIdx=0, qbChosen=[], qbCorrect=0, qbTotal=0;
+function initQBuild(){ qbIdx=Math.floor(Math.random()*QB_DATA.length); qbCorrect=0; qbTotal=0; renderQBuild(); }
+function renderQBuild(){
+  var s=QB_DATA[qbIdx%QB_DATA.length];
+  document.getElementById('qb-prompt').textContent='Build: "'+s.eng+'"';
+  qbChosen=[];
+  document.getElementById('qb-slots').innerHTML='';
+  var tiles=shuffle(s.words.concat(s.distract));
+  var tilesEl=document.getElementById('qb-tiles'); tilesEl.innerHTML='';
+  tiles.forEach(function(w){
+    var el=document.createElement('div'); el.className='tile'; el.innerHTML=w.t+'<div class="tphon">'+w.p+'</div>';
+    el.onclick=function(){
+      if(el.classList.contains('used'))return;
+      el.classList.add('used');
+      qbChosen.push({t:w.t,p:w.p,el:el});
+      renderQBSlots();
+    };
+    tilesEl.appendChild(el);
+  });
+  document.getElementById('qb-result').textContent='';
+  document.getElementById('qb-next').style.display='none';
+  document.getElementById('qb-score').textContent='Score: '+qbCorrect+' / '+qbTotal;
+}
+function renderQBSlots(){
+  var el=document.getElementById('qb-slots'); el.innerHTML='';
+  qbChosen.forEach(function(c,idx){
+    var s=document.createElement('div'); s.className='slot-word'; s.innerHTML=c.t+'<div class="tphon">'+c.p+'</div>';
+    s.onclick=function(){ c.el.classList.remove('used'); qbChosen.splice(idx,1); renderQBSlots(); };
+    el.appendChild(s);
+  });
+}
+function clearQBuild(){
+  qbChosen.forEach(function(c){c.el.classList.remove('used');});
+  qbChosen=[]; renderQBSlots();
+}
+function checkQBuild(){
+  var s=QB_DATA[qbIdx%QB_DATA.length];
+  var built=qbChosen.map(function(c){return c.t;}).join('');
+  var target=s.words.map(function(w){return w.t;}).join('');
+  qbTotal++;
+  if(built===target){
+    qbCorrect++; xp+=10; updateXP(); playCorrect();
+    document.getElementById('qb-result').innerHTML='<span style="color:var(--green)">Correct! ✓</span>';
+  } else {
+    playWrong();
+    document.getElementById('qb-result').innerHTML='<span style="color:var(--red)">Not quite — correct order: '+s.words.map(function(w){return w.t;}).join(' ')+'</span>';
+  }
+  document.getElementById('qb-score').textContent='Score: '+qbCorrect+' / '+qbTotal;
+  document.getElementById('qb-next').style.display='block';
+}
+function nextQBuild(){ qbIdx=Math.floor(Math.random()*QB_DATA.length); renderQBuild(); }
 
 /* ---------- Conversation Fill ---------- */
 var CONVO_DATA=[
@@ -1988,18 +2224,18 @@ function nbAnswer(correct,btn){
 }
 
 /* ---------- Level 5 Test 3: Suneung Mock Exam (win 7 correct, 5 wrong = out; same-category distractors) ---------- */
-var snScore=0, snWrong=0, snAnswered=false, SN_WIN=7, SN_LOSE=5;
+var snScore=0, snWrong=0, snIdx=0, snAnswered=false, SN_ROUNDS=25, SN_LOSE=5;
 function startSuneung(){
   document.getElementById('sn-intro').style.display='none';
   document.getElementById('sn-quiz').style.display='';
-  snScore=0; snWrong=0;
+  snScore=0; snWrong=0; snIdx=0;
   renderSuneungQ();
 }
 function renderSuneungQ(){
   snAnswered=false;
-  document.getElementById('sn-progress').textContent='Correct: '+snScore+' / '+SN_WIN;
+  document.getElementById('sn-progress').textContent='Question '+(snIdx+1)+' of '+SN_ROUNDS;
   document.getElementById('sn-scoretop').textContent=livesLine(snWrong,SN_LOSE);
-  document.getElementById('sn-bar').style.width=(snScore/SN_WIN*100)+'%';
+  document.getElementById('sn-bar').style.width=(snIdx/SN_ROUNDS*100)+'%';
   var pool=vocabUpTo(quizLevel);
   var item=pick(pool);
   var sameCat=pool.filter(function(w){return w.cat===item.cat && w.e!==item.e;});
@@ -2027,17 +2263,36 @@ function snAnswer(correct,btn){
     snWrong++;playWrong();btn.classList.add('wrong');
     document.getElementById('sn-result').innerHTML='<span style="color:var(--red)">Incorrect</span>';
   }
+  document.getElementById('sn-scoretop').textContent=livesLine(snWrong,SN_LOSE);
+  if(snWrong>=SN_LOSE){
+    qgSetTimeout(function(){suneungDone(false);},1000);
+    return;
+  }
   var nb=document.getElementById('sn-next'); nb.disabled=false; nb.style.opacity='1';
 }
 function nextSuneung(){
-  if(snScore>=SN_WIN){suneungDone(true);return;}
-  if(snWrong>=SN_LOSE){suneungDone(false);return;}
+  snIdx++;
+  if(snIdx>=SN_ROUNDS){suneungDone(true);return;}
   renderSuneungQ();
+}
+function suneungGrade(passed,wrong,score,attempted){
+  if(passed){
+    if(wrong<=1)return 1;
+    if(wrong===2)return 2;
+    if(wrong===3)return 3;
+    return 4;
+  }
+  var pct=attempted>0?score/attempted:0;
+  if(pct>=0.5)return 5;
+  if(pct>=0.3)return 6;
+  if(pct>=0.15)return 7;
+  return 8;
 }
 function suneungDone(passed){
   document.getElementById('sn-quiz').style.display='none';
-  var grade=passed?(snWrong<=1?1:snWrong<=3?2:3):(6+Math.min(snWrong-SN_LOSE,3));
-  quizGame3Done(passed,'Correct '+snScore+' — Wrong '+snWrong+' — 등급 '+grade+(passed?' (no mercy, and you still passed)':''));
+  var attempted=Math.min(snIdx+1,SN_ROUNDS);
+  var grade=suneungGrade(passed,snWrong,snScore,attempted);
+  quizGame3Done(passed,'Correct '+snScore+' / '+attempted+' — Wrong '+snWrong+' — 등급 '+grade+(passed?' (survived all 25, no mercy)':''));
 }
 
 /* ============================================================
