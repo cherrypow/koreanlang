@@ -15,7 +15,7 @@ var quizPassed={}; // {lv: {mode1:bool, mode2:bool, mode3:bool}}
 var grammarViewed={};
 function saveState(){
   try{
-    localStorage.setItem(KL_KEY, JSON.stringify({xp:xp,streak:streak,lastPlayDate:lastPlayDate,quizPassed:quizPassed,grammarViewed:grammarViewed,gameWinCount:gameWinCount,gamesPassed:gamesPassed,_levelUnlockToastShown:_levelUnlockToastShown,_gamesVocabToastShown:_gamesVocabToastShown}));
+    localStorage.setItem(KL_KEY, JSON.stringify({xp:xp,streak:streak,lastPlayDate:lastPlayDate,quizPassed:quizPassed,grammarViewed:grammarViewed,gameWinCount:gameWinCount,gamesPassed:gamesPassed,_levelUnlockToastShown:_levelUnlockToastShown,_gamesVocabToastShown:_gamesVocabToastShown,_bankOnboardShown:_bankOnboardShown,_growkorOnboardShown:_growkorOnboardShown}));
   }catch(e){}
 }
 function loadState(){
@@ -28,6 +28,8 @@ function loadState(){
     gameWinCount=d.gameWinCount||0; gamesPassed=d.gamesPassed||{};
     _levelUnlockToastShown=d._levelUnlockToastShown||{1:true};
     _gamesVocabToastShown=d._gamesVocabToastShown||{};
+    _bankOnboardShown=d._bankOnboardShown||false;
+    _growkorOnboardShown=d._growkorOnboardShown||false;
   }catch(e){}
 }
 function updateXP(){ saveState(); }
@@ -109,6 +111,29 @@ function showGamesVocabToast(){
     +'<button onclick="this.parentNode.remove()" style="margin-top:10px;padding:10px 24px;border-radius:10px;border:none;background:var(--purple);color:#fff;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer">Got it!</button>';
   document.body.appendChild(d);
 }
+var _bankOnboardShown=false, _growkorOnboardShown=false;
+function showBankOnboardToast(){
+  if(_bankOnboardShown)return;
+  _bankOnboardShown=true; saveState();
+  var d=document.createElement('div'); d.id='bank-onboard-toast';
+  d.style.cssText='position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:var(--bg2);border:2px solid var(--purple-dim);border-radius:16px;padding:24px 20px;z-index:10000;max-width:300px;text-align:center;box-shadow:0 8px 40px rgba(0,0,0,.5)';
+  d.innerHTML='<div style="font-size:32px;margin-bottom:8px">📖</div>'
+    +'<div style="font-size:16px;font-weight:700;color:var(--text);margin-bottom:8px">Word &amp; Phrase Bank</div>'
+    +'<div style="font-size:13px;color:var(--text2);line-height:1.6;margin-bottom:6px">Come here anytime to refresh vocabulary you\'ve learned — browse by category, tap any word to hear it and see it used in a sentence.</div>'
+    +'<button onclick="this.parentNode.remove()" style="margin-top:10px;padding:10px 24px;border-radius:10px;border:none;background:var(--purple);color:#fff;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer">Got it!</button>';
+  document.body.appendChild(d);
+}
+function showGrowKorOnboardToast(){
+  if(_growkorOnboardShown)return;
+  _growkorOnboardShown=true; saveState();
+  var d=document.createElement('div'); d.id='growkor-onboard-toast';
+  d.style.cssText='position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:var(--bg2);border:2px solid var(--purple-dim);border-radius:16px;padding:24px 20px;z-index:10000;max-width:300px;text-align:center;box-shadow:0 8px 40px rgba(0,0,0,.5)';
+  d.innerHTML='<div style="font-size:32px;margin-bottom:8px">🌱</div>'
+    +'<div style="font-size:16px;font-weight:700;color:var(--text);margin-bottom:8px">GrowKOR</div>'
+    +'<div style="font-size:13px;color:var(--text2);line-height:1.6;margin-bottom:6px">Tap words one at a time to grow a real Korean sentence, following actual SOV grammar. Switch to Play mode for a timed challenge — more word pools and levels unlock as you progress.</div>'
+    +'<button onclick="this.parentNode.remove()" style="margin-top:10px;padding:10px 24px;border-radius:10px;border:none;background:var(--purple);color:#fff;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer">Got it!</button>';
+  document.body.appendChild(d);
+}
 
 /* ---------- dev mode (5 taps on the mascot within 2s) ---------- */
 var devMode=false, devTapCount=0, devTapTimer=null;
@@ -152,17 +177,17 @@ function goTo(sec, btn){
   }
   if(sec==='home')renderHome();
   if(sec==='grammar')renderGrammarHome();
-  if(sec==='bank')renderBank();
+  if(sec==='bank'){renderBank();showBankOnboardToast();}
   if(sec==='games'){renderGamePicker();showGamesVocabToast();}
-  if(sec==='growkor'){grtInitDom();grtUpdateLvButtons();if(!grtRows.length)grtReset();}
+  if(sec==='growkor'){grtInitDom();grtUpdateLvButtons();if(!grtRows.length)grtReset();showGrowKorOnboardToast();}
   if(sec==='quiz' && !quizQueue.length)startQuiz(quizLevel||currentGLevel||1);
   window.scrollTo(0,0);
 }
 
 /* ---------- speech (best-effort, silently no-ops if unavailable) ---------- */
 var _koVoices={m:null,f:null};
-var _koFNames=['yuna','heami','narae','sun-hi','sunhi','서현','유나','female','woman'];
-var _koMNames=['injoon','jinho','인준','male','man'];
+var _koFNames=['yuna','heami','sunhi','sun-hi','seoyeon','narae','yuri','insun','jimin','지민','유나','서현','나래','female','woman'];
+var _koMNames=['injoon','in-joon','jinho','junseo','인준','진호','준서','male','man'];
 function _pickKoVoice(){
   if(!('speechSynthesis' in window))return;
   var voices=speechSynthesis.getVoices();
@@ -193,11 +218,16 @@ function _pickKoVoice(){
 if('speechSynthesis' in window){
   _pickKoVoice();
   speechSynthesis.onvoiceschanged=_pickKoVoice;
+  // WKWebView/mobile browsers don't always fire onvoiceschanged reliably — back it up
+  // with a couple of delayed re-picks so a slow-loading voice list still gets scored.
+  setTimeout(_pickKoVoice,300);
+  setTimeout(_pickKoVoice,1500);
 }
 var _ttsGender='f', _ttsCount=0, _ttsLastText='', _ttsLastTime=0;
 function speakKorean(text,gender){
   try{
     if(!text||!('speechSynthesis' in window))return;
+    if(!_koVoices.f&&!_koVoices.m)_pickKoVoice();
     var now=Date.now();
     if(text===_ttsLastText&&now-_ttsLastTime<500)return;
     _ttsLastText=text;_ttsLastTime=now;
@@ -743,7 +773,7 @@ function renderHomeRoad(){
   // device viewports shorter than a full 844px), measured directly off the source image's
   // card borders. Still converted through toY() below since aspect ratios never match
   // exactly — a raw % mismatch here is what makes locks land between cards instead of on them.
-  var centers=[28.87,43.02,58.14,72.34,86.25];
+  var centers=[28.57,43.42,58.84,73.34,87.55];
   var statY=14.18;
   var cW=el.clientWidth, cH=el.clientHeight, nW=img.naturalWidth, nH=img.naturalHeight;
   var scale=Math.max(cW/nW, cH/nH);
@@ -1455,6 +1485,9 @@ var GAME_LIST=[
 function renderGamePicker(){
   document.getElementById('game-picker').style.display='';
   GAME_IDS.forEach(function(id){document.getElementById('game-'+id).style.display='none';});
+  var anyLocked=!devMode&&GAME_LIST.some(function(g){return !isGameUnlocked(g.id);});
+  var hint=document.getElementById('game-unlock-hint');
+  if(hint)hint.style.display=anyLocked?'block':'none';
   var el=document.getElementById('game-list');
   var h='';
   for(var i=0;i<GAME_LIST.length;i++){
@@ -2508,9 +2541,9 @@ var grtW=[
 {t:'공부해요',p:'gongbuhaeyo',e:'study',s:'verb',lv:2,va:'ln'},
 {t:'안 먹어요',p:'an meogeoyo',e:'not eat',s:'verb',lv:1,va:'fd'},{t:'안 마셔요',p:'an masyeoyo',e:'not drink',s:'verb',lv:1,va:'bv'},
 {t:'안 가요',p:'an gayo',e:'not go',s:'verb',lv:2,vi:true},
-{t:'맛있어요',p:'masisseoyo',e:'is delicious',s:'adj',lv:1},{t:'새로워요',p:'saeroweoyo',e:'is new',s:'adj',lv:1},
+{t:'맛있어요',p:'masisseoyo',e:'is delicious',s:'adj',lv:1,oa:1},{t:'새로워요',p:'saeroweoyo',e:'is new',s:'adj',lv:1,oa:1},
 {t:'커요',p:'keoyo',e:'is big',s:'adj',lv:2},{t:'작아요',p:'jagayo',e:'is small',s:'adj',lv:2},
-{t:'비싸요',p:'bissayo',e:'is expensive',s:'adj',lv:2},
+{t:'비싸요',p:'bissayo',e:'is expensive',s:'adj',lv:2,oa:1},
 {t:'아주',p:'aju',e:'very',s:'degree',lv:1},
 ];
 // ── Pool B: School / Study ──
@@ -2635,7 +2668,7 @@ var grtWE=[
 {t:'바빠요',p:'bappayo',e:'is busy',s:'adj',lv:2},
 {t:'재미있어요',p:'jaemiisseoyo',e:'is fun',s:'adj',lv:1},
 {t:'빨라요',p:'ppallayo',e:'is fast/early',s:'adj',lv:1},
-{t:'길어요',p:'gireoyo',e:'is long',s:'adj',lv:2},
+{t:'길어요',p:'gireoyo',e:'is long',s:'adj',lv:2,oa:1},
 {t:'졸려요',p:'jollyeoyo',e:'is sleepy',s:'adj',lv:1},
 {t:'아주',p:'aju',e:'very',s:'degree',lv:1},
 ];
@@ -2662,10 +2695,10 @@ var grtWF=[
 {t:'가요',p:'gayo',e:'go',s:'verb',lv:1,vi:true},
 {t:'집에 가요',p:'jibe gayo',e:'go home',s:'verb',lv:1,vi:true},
 {t:'안 사요',p:'an sayo',e:'not buy',s:'verb',lv:1,va:'fd,cl'},
-{t:'싸요',p:'ssayo',e:'is cheap',s:'adj',lv:1},
-{t:'비싸요',p:'bissayo',e:'is expensive',s:'adj',lv:1},
+{t:'싸요',p:'ssayo',e:'is cheap',s:'adj',lv:1,oa:1},
+{t:'비싸요',p:'bissayo',e:'is expensive',s:'adj',lv:1,oa:1},
 {t:'예뻐요',p:'yeppeoyo',e:'is pretty',s:'adj',lv:1},
-{t:'새로워요',p:'saeroweoyo',e:'is new',s:'adj',lv:1},
+{t:'새로워요',p:'saeroweoyo',e:'is new',s:'adj',lv:1,oa:1},
 {t:'커요',p:'keoyo',e:'is big',s:'adj',lv:2},
 {t:'아주',p:'aju',e:'very',s:'degree',lv:1},
 ];
@@ -2744,8 +2777,12 @@ function grtGetCandidates(depth){
   var filt=possible.filter(function(s){return !(noR.indexOf(s)!==-1&&used[s]);});
   if(!filt.length)filt=possible;
   var _gw=grtActivePool();
-  var pool=_gw.filter(function(w){return w.lv<=grtLevel&&filt.indexOf(w.s)!==-1&&!grtShown[w.t];});
-  if(!pool.length)pool=_gw.filter(function(w){return w.lv<=grtLevel&&filt.indexOf(w.s)!==-1;});
+  // oa-tagged adjectives (delicious, expensive, cheap, new, long, etc.) only make sense
+  // describing an object, but this grammar tree has no object→adj path — a subject can only
+  // reach 'adj' directly (e.g. "저는 커요" = "I am tall"), so offering them there produces
+  // nonsense like "we are delicious". Exclude them everywhere since they have no valid home.
+  var pool=_gw.filter(function(w){return w.lv<=grtLevel&&filt.indexOf(w.s)!==-1&&!grtShown[w.t]&&!(w.s==='adj'&&w.oa);});
+  if(!pool.length)pool=_gw.filter(function(w){return w.lv<=grtLevel&&filt.indexOf(w.s)!==-1&&!(w.s==='adj'&&w.oa);});
   if(grtLastWord&&grtLastWord.s==='verb'&&grtLastWord.va){
     var va=grtExpandCats(grtLastWord.va);
     var s=pool.filter(function(w){return w.s!=='object'||(w.c&&va.indexOf(w.c)!==-1);});
