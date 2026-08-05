@@ -27,13 +27,14 @@
 
   <!-- HOME -->
   <div id="sec-home" class="sec on" style="padding:0;visibility:hidden">
-    <div id="home-bg-wrap" style="flex:1;position:relative;overflow:hidden;background:linear-gradient(180deg,#1a1028 0%,#0d1025 55%,#0a0e20 100%);display:flex;align-items:flex-start;justify-content:center">
-      <!-- Locked to the art's exact 853:1654 aspect ratio so every percentage position below
-           maps 1:1 onto the image on every device — no runtime cropping math, nothing to drift. -->
-      <div id="home-art" style="position:relative;width:auto;height:auto;max-width:100%;max-height:100%;aspect-ratio:853/1654">
-        <img id="home-bg-img" alt="" style="width:100%;height:100%;display:none;object-fit:cover">
-        <div id="home-road" style="position:absolute;top:0;left:0;right:0;bottom:0"></div>
-      </div>
+    <!-- Always full-bleed: the image covers 100% of this box on every device, no exceptions,
+         no empty space on any side. object-fit:cover crops whatever's needed to make that true.
+         Overlay positions are computed at runtime in JS from the box's *actual* measured size
+         (not an assumed viewport height), so they stay correct regardless of how much a given
+         device's status bar/chrome eats into the available height. -->
+    <div id="home-bg-wrap" style="flex:1;position:relative;overflow:hidden;background:linear-gradient(180deg,#1a1028 0%,#0d1025 55%,#0a0e20 100%)">
+      <img id="home-bg-img" alt="" style="width:100%;height:100%;display:none;object-fit:cover;object-position:top center">
+      <div id="home-road" style="position:absolute;top:0;left:0;right:0;bottom:0"></div>
     </div>
   </div>
 
