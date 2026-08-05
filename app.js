@@ -619,40 +619,80 @@ function levelStatusText(lv){
 }
 function renderHome(){
   bumpStreak();
-  var root=document.getElementById('home-road');
-  var h='<div class="home-hero"><img src="'+MASCOT_IMG+'" alt="" onclick="devTap()" style="width:64px;height:64px;border-radius:50%;cursor:pointer;margin-bottom:8px"><h2>한국어 KoreanLang</h2><p>Learn real, everyday Korean — five levels, from greetings to fluent reasoning.</p></div>';
-  h+='<div class="stats-row">'+
-     '<div class="stat-card"><div class="sv" style="color:var(--purple)">'+svgI('zap',16)+' '+xp+'</div><div class="sl">XP</div></div>'+
-     '<div class="stat-card"><div class="sv" style="color:var(--amber)">'+streak+'🔥</div><div class="sl">Day streak</div></div>'+
-     '<div class="stat-card"><div class="sv" style="color:var(--green)">'+countLevelsPassed()+'/5</div><div class="sl">Levels done</div></div>'+
-     '</div>';
-  h+='<div class="section-title">Levels</div>';
-  for(var i=0;i<grammarLevels.length;i++){
-    var lv=grammarLevels[i];
-    var unlocked=isLevelUnlocked(lv.level);
-    var passed=levelPassed(lv.level);
-    var colVar=LEVEL_COLOR_VAR[i];
-    var icon=LEVEL_ICON[i];
-    h+='<div class="lvl-card" style="animation-delay:'+(i*0.06)+'s;border-color:'+(unlocked?'var(--'+colVar+'-bg)':'var(--border)')+';opacity:'+(unlocked?'1':'.55')+'" onclick="'+(unlocked?"openLevel("+lv.level+")":"showLockToast("+lv.level+")")+'">'+
-       '<div class="lvl-card-badge" style="color:var(--'+colVar+');background:var(--'+colVar+'-bg);border-color:var(--'+colVar+')">'+(unlocked?svgI(icon,24):svgI('lock',20))+'</div>'+
-       '<div style="flex:1;min-width:0">'+
-       '<div style="font-size:15px;font-weight:700;color:'+(unlocked?'var(--'+colVar+')':'var(--text3)')+'">Level '+lv.level+' — '+lv.label+'</div>'+
-       '<div style="font-size:12px;color:var(--text2);margin-top:2px;line-height:1.5">'+lv.subtitle+'</div>'+
-       '<div class="progress-row"><div class="prog-bar"><div class="prog-fill" style="width:'+(passed?100:(grammarViewed[lv.level]?40:0))+'%;background:var(--'+(passed?'green':colVar)+')"></div></div>'+
-       '<div style="font-size:11px;color:var(--text3);white-space:nowrap">'+levelStatusText(lv.level)+'</div></div>'+
-       '</div>'+
-       (passed?'<div style="color:var(--green);flex-shrink:0">'+svgI('check',18)+'</div>':'')+
-       '</div>';
+  updateXP();
+  var bg=document.getElementById('home-bg-img');
+  if(bg){
+    if(!bg.src.match(/home-bg1/)){bg.src='home-bg1.png';}
+    bg.style.display='block';
+    var _prev=bg.onload;
+    bg.onload=function(){if(_prev)_prev();_homeRtTries=0;requestAnimationFrame(renderHomeRoad);};
   }
-  if(devMode){
-    h+='<div class="section-title" style="margin-top:6px">Dev — jump to quiz</div><div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px">';
-    for(var qi=1;qi<=5;qi++)h+='<button onclick="goToQuizLevel('+qi+')" style="padding:8px 14px;border-radius:20px;border:1px solid #8F1A1A;background:transparent;color:#C9333B;font-size:12px;font-family:inherit;cursor:pointer">Q'+qi+'</button>';
-    h+='</div>';
-  }
-  root.innerHTML=h;
+  _homeRtTries=0;
+  renderHomeRoad();
   document.getElementById('sec-home').style.visibility='visible';
   var splash=document.getElementById('splash-screen');
   if(splash){splash.style.opacity='0';setTimeout(function(){splash.style.display='none';},650);}
+}
+var _homeRtTries=0;
+function renderHomeRoad(){
+  var el=document.getElementById('home-road');
+  if(!el)return;
+  var img=document.getElementById('home-bg-img');
+  if(!img)return;
+  if(!el.clientWidth||!el.clientHeight||!img.naturalHeight){
+    if(_homeRtTries<30){_homeRtTries++;requestAnimationFrame(renderHomeRoad);}
+    return;
+  }
+  _homeRtTries=0;
+  // Card Y-centres as % of the generated art's NATURAL height (home-bg1.png, 853×1844),
+  // measured directly off the source image's card borders. Converted to on-screen % via
+  // toY() below to correct for object-fit:cover cropping on viewports whose aspect ratio
+  // differs from the art's — a raw % mismatch here is what makes locks land between cards.
+  var centers=[35.9,48.5,61.8,74.3,86.5];
+  var statY=19.3;
+  var cW=el.clientWidth, cH=el.clientHeight, nW=img.naturalWidth, nH=img.naturalHeight;
+  var scale=Math.max(cW/nW, cH/nH);
+  function toY(p){ return (p/100)*nH*scale/cH*100; }
+  function toX(p){ var offX=(nW*scale-cW)/2; return ((p/100)*nW*scale-offX)/cW*100; }
+  var iconX=25.2; // % of natural width — the level icon circle's centre in home-bg1.png
+
+  var h='';
+  h+='<div onclick="devTap()" style="position:absolute;top:2%;left:20%;width:60%;height:'+toY(33)+'%;z-index:4;cursor:pointer"></div>';
+  h+='<div style="position:absolute;top:'+toY(statY)+'%;left:5%;width:26%;height:5.5%;z-index:2;display:flex;align-items:center;justify-content:center;gap:5px;background:rgba(10,10,20,0.82);border:1.5px solid rgba(200,50,50,0.5);border-radius:22px;box-shadow:0 2px 14px rgba(0,0,0,0.6)">'
+    +'<span style="font-size:14px">🔥</span>'
+    +'<span style="font-size:15px;font-weight:700;color:#E84030;font-family:inherit" id="stat-streak">'+streak+'</span></div>';
+  h+='<div style="position:absolute;top:'+toY(statY)+'%;right:5%;width:26%;height:5.5%;z-index:2;display:flex;align-items:center;justify-content:center;gap:5px;background:rgba(10,10,20,0.82);border:1.5px solid rgba(200,50,50,0.5);border-radius:22px;box-shadow:0 2px 14px rgba(0,0,0,0.6)">'
+    +'<span style="font-size:12px;font-weight:600;color:#C9333B;font-family:inherit">XP</span>'
+    +'<span style="font-size:15px;font-weight:700;color:#E84030;font-family:inherit" id="stat-xp">'+xp+'</span></div>';
+
+  for(var i=0;i<grammarLevels.length;i++){
+    var lv=grammarLevels[i].level;
+    var unlocked=isLevelUnlocked(lv);
+    var passed=levelPassed(lv);
+    var cy=toY(centers[i]);
+    var hh=toY(centers[i]+4.9)-toY(centers[i]-4.9);
+    h+='<div onclick="homeLevelTap('+lv+')" style="position:absolute;top:'+(cy-hh/2)+'%;left:5%;right:5%;height:'+hh+'%;cursor:pointer;z-index:3"></div>';
+    if(!unlocked&&!devMode){
+      h+='<div style="position:absolute;top:'+(cy-hh/2)+'%;left:6%;right:6%;height:'+hh+'%;z-index:3.5;pointer-events:none;background:rgba(5,5,15,.6);border-radius:16px"></div>';
+      h+='<div style="position:absolute;top:'+cy+'%;left:'+toX(iconX)+'%;transform:translate(-50%,-50%);z-index:4;pointer-events:none;width:44px;height:44px;border-radius:50%;background:rgba(0,0,0,.8);border:2px solid rgba(255,255,255,.22);display:flex;align-items:center;justify-content:center;font-size:22px;box-shadow:0 2px 14px rgba(0,0,0,.7)">🔒</div>';
+    }
+    if(passed){
+      h+='<div style="position:absolute;top:'+cy+'%;right:7%;transform:translateY(-50%);z-index:4;pointer-events:none;width:26px;height:26px;border-radius:50%;background:#1a7a1a;border:2px solid #fff3;display:flex;align-items:center;justify-content:center;font-size:13px;color:#fff;font-weight:700;box-shadow:0 2px 10px rgba(0,0,0,.6)">✓</div>';
+    }
+  }
+
+  if(devMode){
+    h+='<div style="position:absolute;bottom:1.5%;left:4%;right:4%;z-index:5;display:flex;gap:4px;justify-content:center;flex-wrap:wrap;background:rgba(0,0,0,.75);border:1px dashed var(--amber);border-radius:10px;padding:6px">';
+    for(var qi=1;qi<=5;qi++)h+='<button onclick="goToQuizLevel('+qi+')" style="padding:4px 10px;border-radius:8px;border:1px solid var(--amber);background:transparent;color:var(--amber);font-size:11px;font-family:inherit;cursor:pointer">Q'+qi+'</button>';
+    h+='</div>';
+  }
+
+  el.innerHTML=h;
+  updateXP();
+}
+function homeLevelTap(lv){
+  if(devMode||isLevelUnlocked(lv)){ openLevel(lv); }
+  else { showLockToast(lv); }
 }
 function countLevelsPassed(){var c=0;for(var i=1;i<=5;i++)if(levelPassed(i))c++;return c;}
 function goToQuizLevel(lv){quizLevel=lv;quizQueue=[];goTo('quiz');}
