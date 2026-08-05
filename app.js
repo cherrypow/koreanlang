@@ -822,8 +822,13 @@ function showToast(msg){
 }
 
 /* ============================================================
-   GRAMMAR RENDERING — paginated, one pattern per page,
-   interactive tap-to-build word order puzzles per example.
+   GRAMMAR RENDERING — paginated one/two examples per page (never
+   mixing patterns on a page), with three interactive checkpoint
+   pages inserted at fixed content milestones, matching ManLang/
+   JapanLang: Speed Round (after page 5, quick-fire recall), Sentence
+   Grow (after pages 7 and 12, embeds the GrowKOR tree-tap mechanic
+   using sentences already covered), Listen & Repeat (after page 10,
+   the one checkpoint that auto-plays audio).
    ============================================================ */
 var currentGLevel=1;
 var gramPages=[], gramPageIdx=0, gramPagesLvl=0;
@@ -835,7 +840,35 @@ function openLevel(lv){
 }
 function renderGrammarHome(){renderGrammarLesson(currentGLevel);}
 function buildGramPages(L){
-  return L.patterns.map(function(pat){return {pat:pat};});
+  var pages=[],contentCount=0;
+  L.patterns.forEach(function(pat){
+    var exs=pat.examples;
+    var i=0;
+    while(i<exs.length&&contentCount<13){
+      var a={ex:exs[i],pat:pat};
+      if(exs[i].words.length<=3&&i+1<exs.length&&exs[i+1].words.length<=3&&contentCount<13){
+        pages.push({type:'double',pat:pat,items:[a,{ex:exs[i+1],pat:pat}]});
+        i+=2;
+      } else {
+        pages.push({type:'single',pat:pat,items:[a]});
+        i++;
+      }
+      contentCount++;
+      if(contentCount===5)pages.push({type:'speedround'});
+      if(contentCount===7)pages.push({type:'sentencegrow'});
+      if(contentCount===10)pages.push({type:'listenrepeat'});
+      if(contentCount===12)pages.push({type:'sentencegrow'});
+    }
+  });
+  return pages;
+}
+function _getPriorExamples(){
+  var prior=[];
+  for(var i=0;i<gramPageIdx;i++){
+    var pg=gramPages[i];
+    if(pg&&pg.items)pg.items.forEach(function(it){prior.push(it.ex);});
+  }
+  return prior;
 }
 function renderGrammarLesson(lv){
   currentGLevel=lv;
@@ -853,35 +886,42 @@ function renderGrammarLesson(lv){
     '<div style="font-size:10px;color:var(--text3)">'+(gramPageIdx+1)+' / '+gramPages.length+'</div></div>'+
     '<div style="height:4px;background:var(--bg3);border-radius:10px;overflow:hidden;margin-bottom:14px">'+
     '<div style="height:100%;width:'+Math.round((gramPageIdx+1)/gramPages.length*100)+'%;background:var(--'+colVar+');border-radius:10px;transition:width .3s"></div></div>';
+  root.innerHTML=h;
 
-  var pat=page.pat;
-  h+='<div style="text-align:center;margin-bottom:14px"><div class="pat-title" style="justify-content:center">'+pat.title+'</div><div class="pat-rule" style="display:inline-block">'+pat.rule+'</div></div>';
-  h+='<div class="card" style="padding:16px 14px">';
-  for(var e=0;e<pat.examples.length;e++){
-    if(e>0)h+='<div style="margin:14px 0;height:1px;background:linear-gradient(90deg,transparent,var(--border2),transparent)"></div>';
-    var ex=pat.examples[e];
+  if(page.type==='speedround'){renderSpeedRound(L,lv,colVar);return;}
+  if(page.type==='listenrepeat'){renderListenRepeat(L,lv,colVar);return;}
+  if(page.type==='sentencegrow'){renderSentenceGrow(L,lv,colVar);return;}
+
+  // Regular content page — single or double example, never mixing patterns
+  var items=page.items;
+  var pat0=items[0].pat;
+  var hh='<div style="text-align:center;margin-bottom:14px"><div class="pat-title" style="justify-content:center">'+pat0.title+'</div><div class="pat-rule" style="display:inline-block">'+pat0.rule+'</div></div>';
+  hh+='<div class="card" style="padding:16px 14px">';
+  items.forEach(function(item,idx){
+    if(idx>0)hh+='<div style="margin:14px 0;height:1px;background:linear-gradient(90deg,transparent,var(--border2),transparent)"></div>';
+    var ex=item.ex;
     var img=GRAMMAR_IMGS[ex.phon];
-    if(img)h+=img;
-    h+='<div style="text-align:center;margin-bottom:10px">'+
+    if(img)hh+=img;
+    hh+='<div style="text-align:center;margin-bottom:10px">'+
        '<button onclick="speakKorean(\''+ex.thai.replace(/'/g,"\\'")+'\')" style="background:none;border:none;cursor:pointer;color:var(--purple);display:inline-flex;align-items:center;gap:6px;margin-bottom:4px">'+svgI('speaker',14)+'</button>'+
        '<div style="font-size:15px;color:var(--text);font-weight:600;line-height:1.5;margin-bottom:2px">'+ex.eng+'</div>'+
        '<div style="font-size:12px;color:var(--purple);font-weight:500">'+ex.phon+'</div></div>';
-    h+='<div id="gram-interact-'+e+'" style="margin-bottom:6px"></div>';
-  }
-  h+='</div>';
-  h+='<div id="gram-feedback" style="font-size:14px;font-weight:600;text-align:center;min-height:20px;margin-top:10px"></div>';
-  h+='<button id="gram-next-btn" style="display:none;width:100%;padding:13px;border-radius:var(--rsm);border:1.5px solid var(--'+colVar+');background:var(--'+colVar+'-bg);color:var(--'+colVar+');cursor:pointer;font-size:14px;font-family:inherit;font-weight:600;margin-top:6px">Next →</button>';
-  root.innerHTML=h;
+    hh+='<div id="gram-interact-'+idx+'" style="margin-bottom:6px"></div>';
+  });
+  hh+='</div>';
+  hh+='<div id="gram-feedback" style="font-size:14px;font-weight:600;text-align:center;min-height:20px;margin-top:10px"></div>';
+  hh+='<button id="gram-next-btn" style="display:none;width:100%;padding:13px;border-radius:var(--rsm);border:1.5px solid var(--'+colVar+');background:var(--'+colVar+'-bg);color:var(--'+colVar+');cursor:pointer;font-size:14px;font-family:inherit;font-weight:600;margin-top:6px">Next →</button>';
+  root.innerHTML+=hh;
 
-  var doneCount=0, total=pat.examples.length;
-  for(var e=0;e<pat.examples.length;e++)(function(ex,idx){
+  var doneCount=0, total=items.length;
+  items.forEach(function(item,idx){
     var area=document.getElementById('gram-interact-'+idx);
     if(!area)return;
-    setupGramBuild(area,ex,function(){
+    setupGramBuild(area,item.ex,function(){
       doneCount++;
       if(doneCount>=total)gramPageDone(lv,colVar);
     });
-  })(pat.examples[e],e);
+  });
 }
 function setupGramBuild(area,ex,onDone){
   area.innerHTML='<div class="gb" style="min-height:38px;background:var(--bg3);border:1.5px dashed var(--border2);border-radius:var(--rsm);padding:6px;display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px;justify-content:center"></div>'+
@@ -934,6 +974,200 @@ function gramPageDone(lv,colVar){
     };
   }
 }
+
+/* ---------- Speed Round — 5 quick-fire timed 2-option recall questions ---------- */
+function renderSpeedRound(L,lv,colVar){
+  var gc=document.getElementById('grammar-content');
+  var headerHTML=gc.innerHTML;
+  var all=_getPriorExamples();
+  if(all.length<5){L.patterns.forEach(function(p){p.examples.forEach(function(e){if(all.indexOf(e)===-1)all.push(e);});});}
+  var pool=shuffle(all).slice(0,5);
+  var qi=0,score=0,answered=false,tmr=null;
+
+  function showSRQ(){
+    answered=false;
+    if(qi>=pool.length){
+      gc.innerHTML=headerHTML+'<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:50vh"><div style="text-align:center"><div style="font-size:18px;font-weight:700;color:var(--green);margin-bottom:8px">'+score+'/'+pool.length+'</div>'
+        +'<button style="width:100%;padding:12px;border-radius:var(--rsm);border:1.5px solid var(--'+colVar+');background:var(--'+colVar+'-bg);color:var(--'+colVar+');cursor:pointer;font-size:14px;font-family:inherit;font-weight:600" onclick="gramPageIdx++;renderGrammarLesson('+lv+')">Continue →</button></div></div>';
+      return;
+    }
+    var q=pool[qi];
+    var wrong=shuffle(all.filter(function(x){return x.eng!==q.eng;}))[0]||{eng:'...'};
+    var opts=shuffle([{eng:q.eng,correct:true},{eng:wrong.eng,correct:false}]);
+    var tl=lv>=2?5:3;
+    gc.innerHTML=headerHTML+'<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:50vh"><div style="text-align:center;width:100%;max-width:320px">'
+      +'<div style="font-size:11px;color:var(--amber);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px">SPEED ROUND — '+(qi+1)+'/'+pool.length+'</div>'
+      +'<div id="sr-timer" style="font-size:22px;font-weight:900;color:var(--amber);margin-bottom:8px">'+tl+'</div>'
+      +'<div style="font-size:13px;color:var(--purple);margin-bottom:4px">'+q.phon+'</div>'
+      +'<div style="font-size:24px;color:var(--text);margin-bottom:12px">'+q.thai+'</div>'
+      +'<div id="sr-opts" style="display:flex;gap:8px"></div></div></div>';
+    var optsEl=document.getElementById('sr-opts');
+    opts.forEach(function(o){
+      var btn=document.createElement('button');
+      btn.className='qbtn';btn.style.cssText='flex:1;padding:12px 8px;font-size:13px;line-height:1.4';
+      btn.textContent=o.eng;
+      btn.onclick=function(){
+        if(answered)return;answered=true;clearInterval(tmr);
+        if(o.correct){score++;btn.classList.add('correct');playCorrect();speakKorean(q.thai);qi++;setTimeout(showSRQ,1500);}
+        else{btn.classList.add('wrong');playWrong();qi++;setTimeout(showSRQ,800);}
+      };
+      optsEl.appendChild(btn);
+    });
+    tmr=setInterval(function(){
+      tl--;var te=document.getElementById('sr-timer');if(te)te.textContent=tl;
+      if(tl<=1&&te)te.style.color='var(--red)';
+      if(tl<=0){clearInterval(tmr);if(!answered){answered=true;qi++;setTimeout(showSRQ,500);}}
+    },1000);
+  }
+  showSRQ();
+}
+
+/* ---------- Listen & Repeat — the one checkpoint that auto-plays audio ---------- */
+function renderListenRepeat(L,lv,colVar){
+  var gc=document.getElementById('grammar-content');
+  var headerHTML=gc.innerHTML;
+  var all=_getPriorExamples();
+  if(all.length<5){L.patterns.forEach(function(p){p.examples.forEach(function(e){if(all.indexOf(e)===-1)all.push(e);});});}
+  var pool=shuffle(all).slice(0,5);
+  var qi=0;
+
+  function showLRQ(){
+    if(qi>=pool.length){
+      gc.innerHTML=headerHTML+'<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:50vh"><div style="text-align:center">'
+        +'<div style="font-size:16px;font-weight:600;color:var(--green);margin-bottom:8px">Listening complete!</div>'
+        +'<button style="width:100%;padding:12px;border-radius:var(--rsm);border:1.5px solid var(--'+colVar+');background:var(--'+colVar+'-bg);color:var(--'+colVar+');cursor:pointer;font-size:14px;font-family:inherit;font-weight:600" onclick="gramPageIdx++;renderGrammarLesson('+lv+')">Continue →</button></div></div>';
+      return;
+    }
+    var q=pool[qi];
+    speakKorean(q.thai);
+    gc.innerHTML=headerHTML+'<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:50vh"><div style="text-align:center;width:100%;max-width:320px">'
+      +'<div style="font-size:11px;color:var(--green);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px">LISTEN &amp; REPEAT — '+(qi+1)+'/'+pool.length+'</div>'
+      +'<button onclick="speakKorean(\''+q.thai.replace(/'/g,"\\'")+'\')" style="background:none;border:none;cursor:pointer;margin-bottom:10px;color:var(--purple)">'+svgI('speaker',36)+'</button>'
+      +'<div style="font-size:16px;color:var(--purple);font-weight:600;margin-bottom:4px">'+q.phon+'</div>'
+      +'<div style="font-size:12px;color:var(--text3);margin-bottom:12px">'+q.eng+'</div>'
+      +'<button class="qbtn" style="padding:12px 40px;font-size:14px" onclick="this.disabled=true;setTimeout(showLRNext,300)">Got it →</button></div></div>';
+  }
+  window.showLRNext=function(){qi++;showLRQ();};
+  showLRQ();
+}
+
+/* ---------- Sentence Grow — embeds the GrowKOR tree-tap mechanic in the lesson flow ---------- */
+var GRAM_WC_TO_GRT={'wc-s':'subject','wc-v':'verb','wc-o':'object','wc-a':'adj','wc-p':'postverb'};
+function renderSentenceGrow(L,lv,colVar){
+  var gc=document.getElementById('grammar-content');
+  var prior=_getPriorExamples();
+  var all=prior.filter(function(e){return e.words.length>=3;});
+  if(all.length<2){all=prior.slice();if(all.length<2){L.patterns.forEach(function(p){p.examples.forEach(function(e){all.push(e);});});}}
+  var sentences=shuffle(all).slice(0,2);
+  var si=0;
+  var headerHTML=gc.innerHTML;
+  var allWords=[];
+  L.patterns.forEach(function(p){p.examples.forEach(function(e){e.words.forEach(function(w){
+    var exists=false;for(var k=0;k<allWords.length;k++){if(allWords[k].t===w.t)exists=true;}
+    if(!exists)allWords.push(w);
+  });});});
+
+  function showGrow(){
+    if(si>=sentences.length){
+      gc.innerHTML=headerHTML+'<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:50vh">'
+        +'<div style="font-size:16px;font-weight:600;color:var(--green);margin-bottom:12px">Sentences complete!</div>'
+        +'<button style="width:90%;max-width:300px;padding:13px;border-radius:var(--rsm);border:1.5px solid var(--'+colVar+');background:var(--'+colVar+'-bg);color:var(--'+colVar+');cursor:pointer;font-size:14px;font-family:inherit;font-weight:600" onclick="gramPageIdx++;renderGrammarLesson('+lv+')">Continue →</button></div>';
+      return;
+    }
+    var sent=sentences[si];
+    var words=sent.words;
+    var wi=0;
+
+    gc.innerHTML=headerHTML
+      +'<div style="text-align:center;margin:20px 0 16px">'
+      +'<div style="font-size:14px;color:var(--'+colVar+');text-transform:uppercase;letter-spacing:.1em;font-weight:700;margin-bottom:6px">SENTENCE GROW</div>'
+      +'<div style="font-size:11px;color:var(--text3);margin-bottom:8px">'+(si+1)+' / '+sentences.length+'</div>'
+      +'<div style="font-size:14px;color:var(--text2)">'+sent.eng+'</div></div>'
+      +'<div id="sg-sent" style="display:flex;flex-wrap:wrap;gap:4px;justify-content:center;padding:8px 12px;min-height:32px;margin-bottom:8px"></div>'
+      +'<div id="sg-tree" style="overflow-y:auto;-webkit-overflow-scrolling:touch;padding:0 8px"></div>'
+      +'<div id="sg-fb" style="font-size:13px;font-weight:600;text-align:center;min-height:18px;margin-top:6px"></div>';
+
+    showRow();
+
+    function showRow(){
+      if(wi>=words.length){
+        var fb=document.getElementById('sg-fb');
+        if(fb){fb.style.color='var(--green)';fb.textContent='✓ '+sent.phon;}
+        speakKorean(sent.thai);playCorrect();
+        si++;
+        var fb2=document.getElementById('sg-fb');
+        if(fb2){
+          var nBtn=document.createElement('button');
+          nBtn.style.cssText='display:block;margin:12px auto 0;padding:12px 40px;border-radius:var(--rsm);border:1.5px solid var(--'+colVar+');background:var(--'+colVar+'-bg);color:var(--'+colVar+');cursor:pointer;font-size:14px;font-family:inherit;font-weight:600';
+          nBtn.textContent='Next →';
+          nBtn.onclick=function(){showGrow();};
+          fb2.parentNode.insertBefore(nBtn,fb2.nextSibling);
+        }
+        return;
+      }
+
+      var correct=words[wi];
+      var wrongs=shuffle(allWords.filter(function(w){return w.t!==correct.t&&w.e!==correct.e;})).slice(0,2);
+      var opts=shuffle([correct].concat(wrongs));
+
+      var tree=document.getElementById('sg-tree');
+      if(!tree)return;
+
+      if(wi>0){
+        var conn=document.createElement('div');
+        conn.style.cssText='display:flex;justify-content:center;padding:2px 0';
+        conn.innerHTML='<div style="width:2px;height:14px;background:rgba(255,255,255,.12);border-radius:1px"></div>';
+        tree.appendChild(conn);
+      }
+
+      var row=document.createElement('div');
+      row.style.cssText='display:flex;flex-wrap:wrap;gap:8px;justify-content:center;animation:slideUp .3s ease-out';
+
+      opts.forEach(function(w,oi){
+        var node=document.createElement('div');
+        var isCorrect=w.t===correct.t;
+        var slotCol=GRAM_WC_TO_GRT[w.c]||'verb';
+        node.className='grt-node s-'+slotCol;
+        node.style.animationDelay=(oi*0.07)+'s';
+        node.innerHTML='<div class="nt">'+w.t+'</div><div class="np">'+w.p+'</div>';
+
+        node.onclick=function(){
+          if(node.dataset.done)return;
+          speakKorean(w.t);
+          if(isCorrect){
+            node.dataset.done='1';
+            node.classList.add('chosen');
+            var siblings=row.children;
+            for(var k=0;k<siblings.length;k++){
+              if(siblings[k]!==node)siblings[k].classList.add('faded');
+            }
+            var sentBar=document.getElementById('sg-sent');
+            if(sentBar){
+              var chip=document.createElement('span');
+              chip.style.cssText='font-size:13px;color:var(--text);font-weight:600;animation:tileBounce .3s ease-out';
+              chip.textContent=w.t;
+              sentBar.appendChild(chip);
+            }
+            playTap();wi++;
+            setTimeout(function(){
+              if(tree)tree.scrollTop=tree.scrollHeight;
+              showRow();
+            },400);
+          } else {
+            node.dataset.done='1';
+            node.classList.add('wrong');
+          }
+        };
+        row.appendChild(node);
+      });
+
+      tree.appendChild(row);
+      setTimeout(function(){if(tree)tree.scrollTop=tree.scrollHeight;},100);
+    }
+  }
+  showGrow();
+}
+
 function grammarLevelComplete(lv){
   grammarViewed[lv]=true; saveState();
   playLevelUp();
