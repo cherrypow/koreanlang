@@ -745,18 +745,32 @@ function renderHome(){
   updateXP();
   var bg=document.getElementById('home-bg-img');
   if(bg){
-    if(!bg.src.match(/home-bg1/)){bg.src='home-bg1.png';}
+    // Cache-bust: this file has been overwritten in place (same filename) across multiple
+    // commits as the art got revised. A browser/WKWebView that cached an older version by URL
+    // would keep rendering old (differently-proportioned) art forever, silently mismatching
+    // every position computed against the current file's actual card layout.
+    if(!bg.src.match(/home-bg1/)){bg.src='home-bg1.png?v=3';}
     bg.style.display='block';
     var _prev=bg.onload;
     bg.onload=function(){if(_prev)_prev();_homeRtTries=0;requestAnimationFrame(renderHomeRoad);};
   }
   _homeRtTries=0;
   renderHomeRoad();
+  // Mobile Safari/WKWebView can still be settling the viewport (chrome show/hide, safe-area
+  // insets applying) after the first successful measurement — re-measure a couple more times
+  // once things have had time to stabilize, so a premature first reading self-corrects instead
+  // of leaving the locks pinned to a stale position. Cheap and harmless if nothing changed.
+  clearTimeout(_homeRtSettleTimer1); clearTimeout(_homeRtSettleTimer2);
+  _homeRtSettleTimer1=setTimeout(renderHomeRoad,400);
+  _homeRtSettleTimer2=setTimeout(renderHomeRoad,1200);
   document.getElementById('sec-home').style.visibility='visible';
   var splash=document.getElementById('splash-screen');
   if(splash){splash.style.opacity='0';setTimeout(function(){splash.style.display='none';},650);}
 }
-var _homeRtTries=0;
+var _homeRtTries=0, _homeRtSettleTimer1=null, _homeRtSettleTimer2=null;
+window.addEventListener('resize',function(){
+  if(curSec==='home')renderHomeRoad();
+});
 function renderHomeRoad(){
   var el=document.getElementById('home-road');
   if(!el)return;
