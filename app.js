@@ -1861,14 +1861,14 @@ function cartAnswer(correct,btn,item){
 var trChosen=[], trRound=0, trWrong=0, TR_WIN=3, TR_LOSE=3;
 function startTransfer(){
   trRound=0;trWrong=0;
-  document.getElementById('tr-illust').innerHTML=gsWrap('#16213a',gsBus(100,80));
   renderTransfer();
 }
 function renderTransfer(){
   var levelPool=SB_DATA.filter(function(s){return s.lv<=quizLevel;});
   if(!levelPool.length)levelPool=SB_DATA;
   var s=pick(levelPool);
-  document.getElementById('tr-prompt').textContent='Line '+(trRound+1)+'/'+TR_WIN+' — Build: "'+s.eng+'"   |   '+livesLine(trWrong,TR_LOSE);
+  document.getElementById('tr-meta').textContent='Line '+(trRound+1)+'/'+TR_WIN+' — '+livesLine(trWrong,TR_LOSE);
+  document.getElementById('tr-prompt').textContent=s.eng;
   trChosen=[];
   renderTrLine(s);
   var tiles=shuffle(s.words.concat(s.distract));
@@ -1882,7 +1882,7 @@ function renderTransfer(){
         el.style.animation='wrongShake .3s';qgSetTimeout(function(){el.style.animation='';},300);
         playWrong(); trWrong++;
         if(trWrong>=TR_LOSE){quizGame3Done(false,'Missed 3 transfers');return;}
-        document.getElementById('tr-prompt').textContent='Line '+(trRound+1)+'/'+TR_WIN+' — Build: "'+s.eng+'"   |   '+livesLine(trWrong,TR_LOSE);
+        document.getElementById('tr-meta').textContent='Line '+(trRound+1)+'/'+TR_WIN+' — '+livesLine(trWrong,TR_LOSE);
         return;
       }
       el.classList.add('used'); el.style.opacity='.25'; el.style.pointerEvents='none';
@@ -1901,17 +1901,35 @@ function renderTransfer(){
   document.getElementById('tr-result').textContent='';
   document.getElementById('tr-next').style.display='none';
 }
+var TR_STATIONS=[
+  {left:'10%',top:20},
+  {left:'55%',top:20},
+  {left:'55%',top:80},
+  {left:'85%',top:80},
+  {left:'85%',top:150}
+];
 function renderTrLine(s){
   var n=s.words.length;
   var line=document.getElementById('tr-line');
-  var h='<div style="position:absolute;left:5%;right:5%;top:20px;height:3px;background:var(--border2)"></div>';
-  for(var i=0;i<n;i++){
-    var pct=5+(i/(n-1||1))*90;
-    var done=i<trChosen.length;
-    h+='<div style="position:absolute;left:'+pct+'%;top:14px;width:14px;height:14px;border-radius:50%;transform:translateX(-50%);background:'+(done?'var(--green)':'var(--bg3)')+';border:2px solid '+(done?'var(--green)':'var(--border2)')+'"></div>';
+  var h='';
+  for(var i=0;i<TR_STATIONS.length-1;i++){
+    var a=TR_STATIONS[i], b=TR_STATIONS[i+1];
+    if(a.top===b.top){
+      var leftA=parseFloat(a.left), leftB=parseFloat(b.left);
+      var lo=Math.min(leftA,leftB), hi=Math.max(leftA,leftB);
+      h+='<div style="position:absolute;left:'+lo+'%;width:'+(hi-lo)+'%;top:'+(a.top+1)+'px;height:3px;background:var(--border2)"></div>';
+    } else {
+      var topLo=Math.min(a.top,b.top), topHi=Math.max(a.top,b.top);
+      h+='<div style="position:absolute;left:'+a.left+';top:'+topLo+'px;width:3px;height:'+(topHi-topLo)+'px;background:var(--border2);transform:translateX(-1px)"></div>';
+    }
   }
-  var trainPct=trChosen.length===0?5:5+(trChosen.length/(n-1||1))*90;
-  h+='<div style="position:absolute;left:'+trainPct+'%;top:-4px;transform:translateX(-50%);font-size:22px;transition:left .4s ease-out">🚇</div>';
+  var stationIdx=Math.max(0,Math.min(4,Math.round(trChosen.length/(n||1)*4)));
+  for(var i=0;i<TR_STATIONS.length;i++){
+    var st=TR_STATIONS[i], reached=i<=stationIdx;
+    h+='<div style="position:absolute;left:'+st.left+';top:'+st.top+'px;width:14px;height:14px;border-radius:50%;transform:translate(-50%,-50%);background:'+(reached?'var(--green)':'var(--bg3)')+';border:2px solid '+(reached?'var(--green)':'var(--border2)')+'"></div>';
+  }
+  var cur=TR_STATIONS[stationIdx];
+  h+='<div style="position:absolute;left:'+cur.left+';top:'+(cur.top-26)+'px;transform:translate(-50%,0);font-size:26px;transition:left .4s ease-out,top .4s ease-out">🚇</div>';
   line.innerHTML=h;
 }
 function nextTransfer(){renderTransfer();}
