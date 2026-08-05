@@ -5,7 +5,7 @@ workflows:
     instance_type: mac_mini_m2
     environment:
       groups:
-        - "AppKoreanLang"
+        - "Koreanlang"
       vars:
         BUNDLE_ID: "com.cherrypow.koreanlang"
       xcode: latest

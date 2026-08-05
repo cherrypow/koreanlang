@@ -114,7 +114,7 @@ Audio is not blocking for v1 submission — ship without it and add in an update
 | # | Item | Status |
 |---|------|--------|
 | 5.1 | Bundle ID `com.cherrypow.koreanlang` set in `capacitor.config.json`, `Info.plist`, `project.pbxproj` | ✅ Done |
-| 5.2 | `codemagic.yaml` environment group renamed to `AppKoreanLang` | ✅ Done — **create this group in Codemagic before first CI run** |
+| 5.2 | `codemagic.yaml` environment group set to `Koreanlang` | ✅ Done — group created in Codemagic with `APP_STORE_CONNECT_PRIVATE_KEY_BASE64`, `APP_STORE_CONNECT_KEY_IDENTIFIER`, `APP_STORE_CONNECT_ISSUER_ID` (reused from ManLang/JapanLang's API key) |
 | 5.3 | `npm run build` produces a complete, correct `www/` folder | ✅ Verified 2026-08-06 — ran the real build, served `www/` directly, zero failed requests/console errors (this is what caught 1.5's missing-asset bug). `npx cap sync ios` (CocoaPods/Xcode step) still needs verifying on an actual Mac — not available in this environment. |
 | 5.4 | GitHub repo `cherrypow/koreanlang` created and pushed | ✅ Done |
 | 5.5 | App Store Connect app record created | ⬜ Not done |
