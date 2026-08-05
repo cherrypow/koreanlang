@@ -15,7 +15,7 @@ var quizPassed={}; // {lv: {mode1:bool, mode2:bool, mode3:bool}}
 var grammarViewed={};
 function saveState(){
   try{
-    localStorage.setItem(KL_KEY, JSON.stringify({xp:xp,streak:streak,lastPlayDate:lastPlayDate,quizPassed:quizPassed,grammarViewed:grammarViewed}));
+    localStorage.setItem(KL_KEY, JSON.stringify({xp:xp,streak:streak,lastPlayDate:lastPlayDate,quizPassed:quizPassed,grammarViewed:grammarViewed,gameWinCount:gameWinCount,gamesPassed:gamesPassed,_levelUnlockToastShown:_levelUnlockToastShown,_gamesVocabToastShown:_gamesVocabToastShown}));
   }catch(e){}
 }
 function loadState(){
@@ -25,6 +25,9 @@ function loadState(){
     var d=JSON.parse(raw);
     xp=d.xp||0; streak=d.streak||0; lastPlayDate=d.lastPlayDate||null;
     quizPassed=d.quizPassed||{}; grammarViewed=d.grammarViewed||{};
+    gameWinCount=d.gameWinCount||0; gamesPassed=d.gamesPassed||{};
+    _levelUnlockToastShown=d._levelUnlockToastShown||{1:true};
+    _gamesVocabToastShown=d._gamesVocabToastShown||{};
   }catch(e){}
 }
 function updateXP(){ saveState(); }
@@ -44,13 +47,68 @@ function levelPassed(lv){
   var q=quizPassed[lv];
   return !!(q && q.mode1 && q.mode2 && q.mode3);
 }
+// Matches ManLang/JapanLang: unlocking level N requires BOTH the previous level's quiz
+// fully passed AND a cumulative game-win count across the Games tab — quiz alone isn't enough.
+var GRAMMAR_GAME_REQ={2:1,3:2,4:3,5:4};
+var gameWinCount=0, gamesPassed={};
+var _levelUnlockToastShown={1:true};
 function isLevelUnlocked(lv){
   if(devMode)return true;
   if(lv===1)return true;
-  return levelPassed(lv-1);
+  if(!levelPassed(lv-1))return false;
+  return gameWinCount>=(GRAMMAR_GAME_REQ[lv]||0);
 }
 var GROWKOR_UNLOCK={1:1,2:2,3:4};
 function isGrowKORLevelUnlocked(lv){ return isLevelUnlocked(GROWKOR_UNLOCK[lv]||1); }
+
+/* ---------- games tab: unlock-by-grammar-level + win tracking ---------- */
+var GAME_UNLOCK={match:1,flash:2,builder:2,calendar:2,convo:3,opposite:3,qbuild:4,tense:4};
+function isGameUnlocked(id){
+  if(devMode)return true;
+  var req=GAME_UNLOCK[id];
+  if(!req)return true;
+  return isLevelUnlocked(req);
+}
+function markGamePassed(id){
+  gamesPassed[id]=true;
+  gameWinCount++;
+  saveState();
+  checkLevelUnlockToast();
+}
+function checkLevelUnlockToast(){
+  for(var lv=2;lv<=5;lv++){
+    if(_levelUnlockToastShown[lv])continue;
+    if(isLevelUnlocked(lv)){
+      _levelUnlockToastShown[lv]=true;
+      saveState();
+      showLevelUnlockToast(lv);
+    }
+  }
+}
+function showLevelUnlockToast(lv){
+  playVictoryFanfare();
+  var d=document.createElement('div'); d.id='level-unlock-toast';
+  d.style.cssText='position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:var(--bg2);border:2px solid #22c55e66;border-radius:20px;padding:28px 22px;z-index:10001;max-width:300px;text-align:center;box-shadow:0 8px 40px rgba(0,0,0,.7)';
+  d.innerHTML='<div style="font-size:38px;margin-bottom:10px">🎉</div>'
+    +'<div style="font-size:19px;font-weight:800;color:#4ade80;margin-bottom:8px">Grammar Level '+lv+' Unlocked!</div>'
+    +'<div style="font-size:13px;color:var(--text2);margin-bottom:16px;line-height:1.5">New grammar patterns and games are now available.</div>'
+    +'<button onclick="this.parentNode.remove()" style="padding:11px 28px;border-radius:12px;border:none;background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer">Continue</button>';
+  document.body.appendChild(d);
+}
+var _gamesVocabToastShown={};
+function showGamesVocabToast(){
+  var maxLv=1;
+  for(var i=1;i<=5;i++){if(isLevelUnlocked(i))maxLv=i;}
+  if(maxLv<2||_gamesVocabToastShown[maxLv])return;
+  _gamesVocabToastShown[maxLv]=true;
+  var d=document.createElement('div'); d.id='games-vocab-toast';
+  d.style.cssText='position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:var(--bg2);border:2px solid var(--purple-dim);border-radius:16px;padding:24px 20px;z-index:10000;max-width:300px;text-align:center;box-shadow:0 8px 40px rgba(0,0,0,.5)';
+  d.innerHTML='<div style="font-size:32px;margin-bottom:8px">🎮</div>'
+    +'<div style="font-size:16px;font-weight:700;color:var(--text);margin-bottom:8px">Grammar Level '+maxLv+' Unlocked!</div>'
+    +'<div style="font-size:13px;color:var(--text2);line-height:1.6;margin-bottom:6px">New games are now available. As you unlock more grammar levels, game vocabulary grows too — every game now includes Level '+maxLv+' words.</div>'
+    +'<button onclick="this.parentNode.remove()" style="margin-top:10px;padding:10px 24px;border-radius:10px;border:none;background:var(--purple);color:#fff;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer">Got it!</button>';
+  document.body.appendChild(d);
+}
 
 /* ---------- dev mode (5 taps on the mascot within 2s) ---------- */
 var devMode=false, devTapCount=0, devTapTimer=null;
@@ -95,32 +153,67 @@ function goTo(sec, btn){
   if(sec==='home')renderHome();
   if(sec==='grammar')renderGrammarHome();
   if(sec==='bank')renderBank();
-  if(sec==='games')renderGamePicker();
+  if(sec==='games'){renderGamePicker();showGamesVocabToast();}
   if(sec==='growkor'){grtInitDom();grtUpdateLvButtons();if(!grtRows.length)grtReset();}
   if(sec==='quiz' && !quizQueue.length)startQuiz(quizLevel||currentGLevel||1);
   window.scrollTo(0,0);
 }
 
 /* ---------- speech (best-effort, silently no-ops if unavailable) ---------- */
-var _koVoice=null;
+var _koVoices={m:null,f:null};
+var _koFNames=['yuna','heami','narae','sun-hi','sunhi','서현','유나','female','woman'];
+var _koMNames=['injoon','jinho','인준','male','man'];
 function _pickKoVoice(){
   if(!('speechSynthesis' in window))return;
-  var vs=speechSynthesis.getVoices();
-  for(var i=0;i<vs.length;i++){ if(vs[i].lang && vs[i].lang.indexOf('ko')===0){_koVoice=vs[i];return;} }
+  var voices=speechSynthesis.getVoices();
+  var koV=voices.filter(function(v){return v.lang && v.lang.indexOf('ko')===0;});
+  var online=koV.filter(function(v){var n=v.name.toLowerCase();return n.indexOf('online')!==-1||n.indexOf('neural')!==-1||n.indexOf('natural')!==-1||n.indexOf('enhanced')!==-1||n.indexOf('premium')!==-1;});
+  var pool=online.length?online:koV;
+  var fCand=[],mCand=[];
+  for(var i=0;i<pool.length;i++){
+    var n=pool[i].name.toLowerCase();
+    for(var fi=0;fi<_koFNames.length;fi++){if(n.indexOf(_koFNames[fi])!==-1){fCand.push({v:pool[i],pri:fi});break;}}
+    for(var mi=0;mi<_koMNames.length;mi++){if(n.indexOf(_koMNames[mi])!==-1){mCand.push({v:pool[i],pri:mi});break;}}
+  }
+  if(!fCand.length&&!mCand.length){
+    for(var j=0;j<koV.length;j++){
+      var n2=koV[j].name.toLowerCase();
+      for(var fi2=0;fi2<_koFNames.length;fi2++){if(n2.indexOf(_koFNames[fi2])!==-1){fCand.push({v:koV[j],pri:fi2});break;}}
+      for(var mi2=0;mi2<_koMNames.length;mi2++){if(n2.indexOf(_koMNames[mi2])!==-1){mCand.push({v:koV[j],pri:mi2});break;}}
+    }
+  }
+  fCand.sort(function(a,b){return a.pri-b.pri;});
+  mCand.sort(function(a,b){return a.pri-b.pri;});
+  if(fCand.length)_koVoices.f=fCand[0].v;
+  if(mCand.length)_koVoices.m=mCand[0].v;
+  if(!_koVoices.f&&koV.length)_koVoices.f=koV[0];
+  if(!_koVoices.m&&koV.length>1)_koVoices.m=koV[1]; else if(!_koVoices.m)_koVoices.m=_koVoices.f;
+  if(!_koVoices.f)_koVoices.f=_koVoices.m;
 }
 if('speechSynthesis' in window){
   _pickKoVoice();
   speechSynthesis.onvoiceschanged=_pickKoVoice;
 }
-function speakKorean(text){
+var _ttsGender='f', _ttsCount=0, _ttsLastText='', _ttsLastTime=0;
+function speakKorean(text,gender){
   try{
-    if(!('speechSynthesis' in window))return;
-    speechSynthesis.cancel();
-    var u=new SpeechSynthesisUtterance(text);
-    u.lang='ko-KR';
-    if(_koVoice)u.voice=_koVoice;
-    speechSynthesis.speak(u);
+    if(!text||!('speechSynthesis' in window))return;
+    var now=Date.now();
+    if(text===_ttsLastText&&now-_ttsLastTime<500)return;
+    _ttsLastText=text;_ttsLastTime=now;
+    var g=gender||_ttsGender;
+    _ttsCount++;
+    if(_ttsCount%10===0){speechSynthesis.cancel();setTimeout(function(){_speakKoNow(text,g);},100);return;}
+    _speakKoNow(text,g);
   }catch(e){}
+}
+function _speakKoNow(text,g){
+  speechSynthesis.cancel();
+  var u=new SpeechSynthesisUtterance(text);
+  u.lang='ko-KR'; u.rate=0.9;
+  if(_koVoices[g])u.voice=_koVoices[g];
+  else if(_koVoices.f)u.voice=_koVoices.f;
+  speechSynthesis.speak(u);
 }
 
 /* ---------- sound effects (Web Audio oscillator tones, no assets) ---------- */
@@ -650,7 +743,7 @@ function renderHomeRoad(){
   // device viewports shorter than a full 844px), measured directly off the source image's
   // card borders. Still converted through toY() below since aspect ratios never match
   // exactly — a raw % mismatch here is what makes locks land between cards instead of on them.
-  var centers=[28.57,42.62,57.44,71.34,84.95];
+  var centers=[28.87,43.02,58.14,72.34,86.25];
   var statY=14.18;
   var cW=el.clientWidth, cH=el.clientHeight, nW=img.naturalWidth, nH=img.naturalHeight;
   var scale=Math.max(cW/nW, cH/nH);
@@ -1075,6 +1168,7 @@ function renderQuizQuestion(){
   if(quizMode===1){ // Korean -> English
     qLabel.textContent='What does this mean?';
     qThai.textContent=item.t; qPhon.textContent=item.p;
+    speakKorean(item.t);
     for(var i=0;i<opts.length;i++)(function(o){
       var b=document.createElement('button'); b.className='qbtn'; b.textContent=o.e;
       b.onclick=function(){answerQuiz(o.e===item.e,b);}; optsEl.appendChild(b);
@@ -1082,6 +1176,7 @@ function renderQuizQuestion(){
   } else if(quizMode===2){ // Korean -> correct romanization
     qLabel.textContent='Choose the correct pronunciation';
     qThai.textContent=item.t; qPhon.textContent='('+item.e+')';
+    speakKorean(item.t);
     for(var i=0;i<opts.length;i++)(function(o){
       var b=document.createElement('button'); b.className='qbtn'; b.textContent=o.p;
       b.onclick=function(){answerQuiz(o.p===item.p,b);}; optsEl.appendChild(b);
@@ -1125,11 +1220,12 @@ function finishQuizRound(){
     if(!quizPassed[quizLevel])quizPassed[quizLevel]={mode1:false,mode2:false,mode3:false};
     quizPassed[quizLevel]['mode'+quizMode]=true;
     saveState();
+    checkLevelUnlockToast();
   }
   var qOpts=document.getElementById('q-opts');
   qOpts.innerHTML='';
   var msg=passed?'🎉 Passed! '+quizScore+'/10 — mode complete.':'Scored '+quizScore+'/10 — need 7 to pass. Try again!';
-  document.getElementById('q-result').innerHTML='<div style="font-size:16px;font-weight:700;color:'+(passed?'var(--green)':'var(--amber)')+'">'+msg+'</div>';
+  document.getElementById('q-result').innerHTML='<div style="font-size:16px;font-weight:700;color:'+(passed?'var(--green)':'var(--amber)')+'">'+msg+'</div>'+(passed?gameGateHintHTML(quizLevel):'');
   document.getElementById('q-thai').textContent=''; document.getElementById('q-phon').textContent='';
   document.getElementById('q-label').textContent=passed?'Nice work!':'Keep practicing';
   if(passed && quizScore===10){showVictory();} else if(passed){playLevelUp();} else {playFailBuzz();}
@@ -1149,6 +1245,12 @@ function finishQuizRound(){
   renderModeChecklist();
 }
 function allModesDone(lv){var q=quizPassed[lv];return !!(q&&q.mode1&&q.mode2&&q.mode3);}
+function gameGateHintHTML(lv){
+  if(devMode||lv>=5||!allModesDone(lv))return '';
+  var need=GRAMMAR_GAME_REQ[lv+1]||0;
+  if(gameWinCount>=need)return '';
+  return '<div style="font-size:12px;color:var(--amber);margin-top:8px">🎮 Win '+(need-gameWinCount)+' more game'+(need-gameWinCount===1?'':'s')+' in the Games tab to unlock Level '+(lv+1)+'.</div>';
+}
 
 /* ============================================================
    PHRASE BANK — everyday phrases by category
@@ -1357,12 +1459,19 @@ function renderGamePicker(){
   var h='';
   for(var i=0;i<GAME_LIST.length;i++){
     var g=GAME_LIST[i];
-    h+='<div class="game-card" onclick="openGame(\''+g.id+'\')"><div class="game-icon">'+g.icon+'</div><div><div class="game-title">'+g.title+'</div><div class="game-desc">'+g.desc+'</div></div></div>';
+    var unlocked=isGameUnlocked(g.id);
+    if(unlocked){
+      h+='<div class="game-card" onclick="openGame(\''+g.id+'\')"><div class="game-icon">'+g.icon+'</div><div><div class="game-title">'+g.title+'</div><div class="game-desc">'+g.desc+'</div></div></div>';
+    } else {
+      var reqLv=GAME_UNLOCK[g.id]||1;
+      h+='<div class="game-card" style="opacity:.4;cursor:default" onclick="showToast(\'Unlock at Grammar Level '+reqLv+'\')"><div class="game-icon" style="filter:grayscale(1)">'+g.icon+'</div><div><div class="game-title">'+g.title+' 🔒</div><div class="game-desc">Unlock at Grammar Level '+reqLv+'</div></div></div>';
+    }
   }
   el.innerHTML=h;
 }
 function backToGames(){renderGamePicker();}
 function openGame(id){
+  if(!isGameUnlocked(id)){showToast('Unlock at Grammar Level '+(GAME_UNLOCK[id]||1));return;}
   document.getElementById('game-picker').style.display='none';
   document.getElementById('game-'+id).style.display='flex';
   if(id==='builder')startBuilder();
@@ -1434,6 +1543,7 @@ function renderOppQuestion(){
   document.getElementById('opp-word').textContent=q.t;
   document.getElementById('opp-phon').textContent=q.p;
   document.getElementById('opp-eng').textContent=q.e;
+  speakKorean(q.t);
   var distractors=shuffle(OPP_DATA.filter(function(o){return o!==pair;})).slice(0,3).map(function(o){return Math.random()<0.5?o.a:o.b;});
   var opts=shuffle([correct].concat(distractors));
   var el=document.getElementById('opp-opts'); el.innerHTML='';
@@ -1444,7 +1554,11 @@ function renderOppQuestion(){
       if(oppAnswered)return; oppAnswered=true;
       var all=el.querySelectorAll('.opp-btn'); for(var k=0;k<all.length;k++)all[k].disabled=true;
       oppTotal++;
-      if(o.t===correct.t){oppScore++;xp+=5;updateXP();b.classList.add('correct');playCorrect();document.getElementById('opp-result').innerHTML='<span style="color:var(--green)">Correct! ✓</span>';}
+      if(o.t===correct.t){
+        oppScore++;xp+=5;updateXP();b.classList.add('correct');playCorrect();speakKorean(o.t);
+        document.getElementById('opp-result').innerHTML='<span style="color:var(--green)">Correct! ✓</span>';
+        if(oppScore>=5){oppScore=0;showVictory();markGamePassed('opposite');}
+      }
       else{b.classList.add('wrong');playWrong();document.getElementById('opp-result').innerHTML='<span style="color:var(--red)">The answer was '+correct.t+'</span>';}
       document.getElementById('opp-next').style.display='block';
     };
@@ -1488,10 +1602,11 @@ function nextCalRound(){
   var promptEl=document.getElementById('cal-prompt'), optsEl=document.getElementById('cal-opts');
   if(showKR){
     promptEl.innerHTML='<div style="font-size:13px;color:var(--text3);margin-bottom:8px;text-transform:uppercase;letter-spacing:.06em">What does this mean?</div><div style="font-size:36px;color:var(--text)">'+correct.t+'</div><div style="font-size:14px;color:var(--purple);font-weight:500;margin-top:4px">'+correct.p+'</div>';
+    speakKorean(correct.t);
     optsEl.innerHTML='';
     opts.forEach(function(w){
       var b=document.createElement('button'); b.className='qbtn'; b.style.padding='14px'; b.textContent=w.e;
-      b.onclick=function(){pickCal(w.e,correct.e,b);};
+      b.onclick=function(){pickCal(w.e,correct.e,b,correct.t);};
       optsEl.appendChild(b);
     });
   } else {
@@ -1500,17 +1615,18 @@ function nextCalRound(){
     opts.forEach(function(w){
       var b=document.createElement('button'); b.className='qbtn'; b.style.cssText='padding:14px;font-size:16px';
       b.innerHTML=w.t+'<div style="font-size:10px;color:var(--purple);margin-top:2px">'+w.p+'</div>';
-      b.onclick=function(){pickCal(w.t,correct.t,b);};
+      b.onclick=function(){pickCal(w.t,correct.t,b,correct.t);};
       optsEl.appendChild(b);
     });
   }
   document.getElementById('cal-score').textContent=calScore+' / '+calTotal+' correct';
 }
-function pickCal(picked,correct,btn){
+function pickCal(picked,correct,btn,koWord){
   if(calAnswered)return; calAnswered=true; calTotal++;
   var all=document.querySelectorAll('#cal-opts .qbtn'); for(var i=0;i<all.length;i++)all[i].disabled=true;
   if(picked===correct){
     calScore++; xp+=5; updateXP(); playCorrect(); btn.classList.add('correct');
+    if(koWord)speakKorean(koWord);
     document.getElementById('cal-result').innerHTML='<span style="color:var(--green)">Correct ✓</span>';
   } else {
     playWrong(); btn.classList.add('wrong');
@@ -1523,6 +1639,8 @@ function pickCal(picked,correct,btn){
   } else if(calTotal===7 && calMode==='months'){
     setTimeout(function(){
       var pct=Math.round(calScore/7*100);
+      markGamePassed('calendar');
+      if(calScore>=5)playLevelUp();
       document.getElementById('cal-result').innerHTML='<div style="margin-top:8px;font-size:17px;font-weight:700;color:var(--green)">Complete! '+calScore+'/7 ('+pct+'%)</div>';
       document.getElementById('cal-opts').innerHTML='<button class="qbtn" style="grid-column:1/-1;padding:14px;background:var(--purple-bg);color:var(--purple);border-color:var(--purple-dim)" onclick="initCalendarGame()">Play Again</button>';
     },1200);
@@ -1584,6 +1702,7 @@ function renderTense(){
   document.getElementById('gt-original').textContent=s.base.t;
   document.getElementById('gt-orig-phon').textContent=s.base.p+' = '+s.base.e;
   document.getElementById('gt-task').textContent='→ '+task.label;
+  speakKorean(s.base.t);
   document.getElementById('gt-result').textContent='';
   document.getElementById('gt-explain').style.display='none';
   document.getElementById('gt-next').style.display='none';
@@ -1611,7 +1730,11 @@ function checkTense(btn,chosen,correctForm){
     else if(b===btn && !ok)b.classList.add('wrong');
   });
   var res=document.getElementById('gt-result');
-  if(ok){ gtScore++; xp+=8; updateXP(); playCorrect(); res.innerHTML='<span style="color:var(--green)">Correct ✓</span>'; }
+  if(ok){
+    gtScore++; xp+=8; updateXP(); playCorrect(); speakKorean(correctForm.t);
+    res.innerHTML='<span style="color:var(--green)">Correct ✓</span>';
+    if(gtScore>=5){gtScore=0;showVictory();markGamePassed('tense');}
+  }
   else { playWrong(); res.innerHTML='<span style="color:var(--red)">Incorrect</span>'; }
   var pair=gtQueue[gtQIdx];
   document.getElementById('gt-explain').style.display='block';
@@ -1675,8 +1798,9 @@ function checkQBuild(){
   var target=s.words.map(function(w){return w.t;}).join('');
   qbTotal++;
   if(built===target){
-    qbCorrect++; xp+=10; updateXP(); playCorrect();
+    qbCorrect++; xp+=10; updateXP(); playCorrect(); speakKorean(target);
     document.getElementById('qb-result').innerHTML='<span style="color:var(--green)">Correct! ✓</span>';
+    if(qbCorrect>=5){qbCorrect=0;showVictory();markGamePassed('qbuild');}
   } else {
     playWrong();
     document.getElementById('qb-result').innerHTML='<span style="color:var(--red)">Not quite — correct order: '+s.words.map(function(w){return w.t;}).join(' ')+'</span>';
@@ -1756,14 +1880,16 @@ var CONVO_DATA=[
     {spk:'B',t:'예뻐요! 잘 어울려요.',p:'yeppeoyo! jal eoullyeoyo.',e:'It’s pretty! It suits you.',blank:true},
   ],wrong:['너무 비싸요.','저는 몰라요.']},
 ];
-var convoIdx=0, convoScore=0, convoTotal=0, convoAnswered=false;
+var convoIdx=0, convoScore=0, convoTotal=0, convoAnswered=false, convoPool=[];
 function startConvo(){
-  convoIdx=Math.floor(Math.random()*CONVO_DATA.length); convoScore=0; convoTotal=0;
+  convoPool=CONVO_DATA.filter(function(d){return d.lv<=(currentGLevel||1);});
+  if(convoPool.length<3)convoPool=CONVO_DATA;
+  convoIdx=Math.floor(Math.random()*convoPool.length); convoScore=0; convoTotal=0;
   renderConvo();
 }
 function renderConvo(){
   convoAnswered=false;
-  var d=CONVO_DATA[convoIdx%CONVO_DATA.length];
+  var d=convoPool[convoIdx%convoPool.length];
   document.getElementById('convo-lv').textContent='Lv '+d.lv;
   var linesEl=document.getElementById('convo-lines');
   var h='', blankLine=null;
@@ -1780,7 +1906,11 @@ function renderConvo(){
     b.onclick=function(){
       if(convoAnswered)return; convoAnswered=true; convoTotal++;
       var all=optsEl.querySelectorAll('.qbtn'); for(var k=0;k<all.length;k++)all[k].disabled=true;
-      if(txt===blankLine.t){convoScore++;xp+=5;updateXP();b.classList.add('correct');playCorrect();document.getElementById('convo-result').innerHTML='<span style="color:var(--green)">Correct! ✓</span>';}
+      if(txt===blankLine.t){
+        convoScore++;xp+=5;updateXP();b.classList.add('correct');playCorrect();speakKorean(blankLine.t);
+        document.getElementById('convo-result').innerHTML='<span style="color:var(--green)">Correct! ✓</span>';
+        if(convoScore>=5){convoScore=0;showVictory();markGamePassed('convo');}
+      }
       else{b.classList.add('wrong');playWrong();document.getElementById('convo-result').innerHTML='<span style="color:var(--red)">Correct answer: '+blankLine.t+'</span>';}
       document.getElementById('convo-next').style.display='block';
     };
@@ -1790,7 +1920,7 @@ function renderConvo(){
   document.getElementById('convo-next').style.display='none';
   document.getElementById('convo-score').textContent='Score: '+convoScore+' / '+convoTotal;
 }
-function nextConvo(){convoIdx=Math.floor(Math.random()*CONVO_DATA.length);renderConvo();}
+function nextConvo(){convoIdx=Math.floor(Math.random()*convoPool.length);renderConvo();}
 
 /* ---------- Sentence Builder ---------- */
 var SB_DATA=[
@@ -1810,10 +1940,14 @@ var SB_DATA=[
   {lv:3,eng:'It is bigger than me',words:[{t:'저',p:'jeo'},{t:'보다',p:'boda'},{t:'커요',p:'keoyo'}],distract:[{t:'작아요',p:'jagayo'},{t:'그',p:'geu'}]},
   {lv:3,eng:'Please don’t worry',words:[{t:'걱정하지',p:'geokjeonghaji'},{t:'마세요',p:'maseyo'}],distract:[{t:'슬퍼요',p:'seulpeoyo'},{t:'주세요',p:'juseyo'}]},
 ];
-var sbIdx=0, sbSlots=[], sbChosen=[], sbCorrect=0, sbTotal=0;
-function startBuilder(){sbIdx=Math.floor(Math.random()*SB_DATA.length);sbCorrect=0;sbTotal=0;renderBuilder();}
+var sbIdx=0, sbSlots=[], sbChosen=[], sbCorrect=0, sbTotal=0, sbPool=[];
+function startBuilder(){
+  sbPool=SB_DATA.filter(function(s){return s.lv<=(currentGLevel||1);});
+  if(sbPool.length<3)sbPool=SB_DATA;
+  sbIdx=Math.floor(Math.random()*sbPool.length);sbCorrect=0;sbTotal=0;renderBuilder();
+}
 function renderBuilder(){
-  var s=SB_DATA[sbIdx%SB_DATA.length];
+  var s=sbPool[sbIdx%sbPool.length];
   document.getElementById('gb-lv').textContent='Lv '+s.lv;
   document.getElementById('gb-prompt').textContent='Build: "'+s.eng+'"';
   sbChosen=[];
@@ -1847,13 +1981,14 @@ function clearBuilder(){
   sbChosen=[]; renderSlots();
 }
 function checkBuilder(){
-  var s=SB_DATA[sbIdx%SB_DATA.length];
+  var s=sbPool[sbIdx%sbPool.length];
   var built=sbChosen.map(function(c){return c.t;}).join('');
   var target=s.words.map(function(w){return w.t;}).join('');
   sbTotal++;
   if(built===target){
-    sbCorrect++; xp+=10; updateXP(); playCorrect();
+    sbCorrect++; xp+=10; updateXP(); playCorrect(); speakKorean(target);
     document.getElementById('gb-result').innerHTML='<span style="color:var(--green)">Correct! ✓</span>';
+    if(sbCorrect>=5){sbCorrect=0;showVictory();markGamePassed('builder');}
   } else {
     playWrong();
     document.getElementById('gb-result').innerHTML='<span style="color:var(--red)">Not quite — correct order: '+s.words.map(function(w){return w.t;}).join(' ')+'</span>';
@@ -1861,7 +1996,7 @@ function checkBuilder(){
   document.getElementById('gb-score').textContent='Score: '+sbCorrect+' / '+sbTotal;
   document.getElementById('gb-next').style.display='block';
 }
-function nextBuilder(){sbIdx=Math.floor(Math.random()*SB_DATA.length);renderBuilder();}
+function nextBuilder(){sbIdx=Math.floor(Math.random()*sbPool.length);renderBuilder();}
 
 /* ---------- Word Match ---------- */
 var matchLv=1, matchLeft=[], matchRight=[], matchSel=null, matchFound=0, matchTotal=0, matchTimer=null, matchTimeLeft=30;
@@ -1900,6 +2035,7 @@ function renderMatchGrid(){
 }
 function matchTap(item,btn){
   if(item.matched || matchTimeLeft<=0)return;
+  if(item.side==='kr')speakKorean(item.t);
   if(!matchSel){ matchSel={item:item,btn:btn}; btn.classList.add('selected'); return; }
   if(matchSel.item===item){ matchSel.btn.classList.remove('selected'); matchSel=null; return; }
   if(matchSel.item.t===item.t){
@@ -1911,6 +2047,7 @@ function matchTap(item,btn){
     if(matchFound>=matchTotal){
       clearInterval(matchTimer);
       playLevelUp();
+      markGamePassed('match');
       document.getElementById('match-result').innerHTML='<span style="color:var(--green)">Round complete! ✓</span>';
       setTimeout(function(){ matchTimeLeft=Math.min(30,matchTimeLeft+15); document.getElementById('match-result').textContent=''; runMatchRound(); },1200);
     }
@@ -1951,6 +2088,7 @@ function renderFlashCard(){
   var item=flashQueue[flashIdx];
   document.getElementById('fc-word').textContent=item.t;
   document.getElementById('fc-phon').textContent=item.p;
+  speakKorean(item.t);
   var pool=MASTER_VOCAB.filter(function(w){return w.e!==item.e;});
   var opts=shuffle([item].concat(shuffle(pool).slice(0,3)));
   var el=document.getElementById('fc-opts'); el.innerHTML='';
@@ -1975,6 +2113,7 @@ function nextCard(){
     document.getElementById('fc-word').textContent='🎉';
     document.getElementById('fc-phon').textContent='';
     document.getElementById('fc-opts').innerHTML='';
+    if(flashScore>=7){playLevelUp();markGamePassed('flash');}
     document.getElementById('fc-result').innerHTML='Set complete — '+flashScore+' / '+flashQueue.length;
     document.getElementById('fc-next').style.display='none';
     return;
@@ -2025,12 +2164,14 @@ function quizGame3Done(passed,scoreLine){
   if(passed){
     if(!quizPassed[quizLevel])quizPassed[quizLevel]={mode1:false,mode2:false,mode3:false};
     quizPassed[quizLevel].mode3=true; saveState();
+    checkLevelUnlockToast();
     playLevelUp();
   } else { playFailBuzz(); }
   var done=document.getElementById('q3-done');
   done.style.display='block';
   done.innerHTML='<div style="font-size:17px;font-weight:700;color:'+(passed?'var(--green)':'var(--amber)')+';margin-bottom:6px">'+(passed?'🎉 Test 3 passed!':'💥 Out of chances — try again')+'</div>'+
     '<div style="font-size:13px;color:var(--text2);margin-bottom:18px">'+scoreLine+'</div>'+
+    (passed?gameGateHintHTML(quizLevel):'')+
     '<button class="q-next-btn" onclick="quizGame3Continue()">'+(passed?(allModesDone(quizLevel)?'Back to Home →':'Continue →'):'Try again →')+'</button>';
   renderModeChecklist();
 }
@@ -2060,6 +2201,7 @@ function renderDeliveryRound(){
   var wrong=pick(pool.filter(function(w){return w.e!==item.e;}));
   document.getElementById('dv-word').textContent=item.t;
   document.getElementById('dv-phon').textContent=item.p;
+  speakKorean(item.t);
   var opts=shuffle([{e:item.e,correct:true},{e:wrong.e,correct:false}]);
   var el=document.getElementById('dv-bins'); el.innerHTML='';
   opts.forEach(function(o){
@@ -2104,6 +2246,7 @@ function renderCartRound(){
   falling.innerHTML='<div style="font-size:32px;line-height:1">🍚</div>'+
     '<div style="font-size:17px;color:var(--text);font-weight:600">'+item.t+'</div>'+
     '<div style="font-size:10px;color:var(--purple)">'+item.p+'</div>';
+  speakKorean(item.t);
   var bowlsEl=document.getElementById('cart-bowls'); bowlsEl.innerHTML='';
   opts.forEach(function(o){
     var b=document.createElement('button'); b.className='qbtn'; b.textContent=o.e;
@@ -2232,6 +2375,7 @@ function renderNoraebangRound(){
   var wrong=pick(pool.filter(function(w){return w.e!==item.e;}));
   document.getElementById('nb-word').textContent=item.t;
   document.getElementById('nb-phon').textContent=item.p;
+  speakKorean(item.t);
   var opts=shuffle([{e:item.e,correct:true},{e:wrong.e,correct:false}]);
   var el=document.getElementById('nb-opts'); el.innerHTML='';
   opts.forEach(function(o){
@@ -2286,6 +2430,7 @@ function renderSuneungQ(){
   var opts=shuffle([item].concat(distractors));
   document.getElementById('sn-word').textContent=item.t;
   document.getElementById('sn-phon').textContent=item.p;
+  speakKorean(item.t);
   var el=document.getElementById('sn-opts'); el.innerHTML='';
   opts.forEach(function(o){
     var b=document.createElement('button'); b.className='qbtn'; b.textContent=o.e;
@@ -2799,6 +2944,7 @@ function genBankExample(v){
 /* ---------- word-tap example-sentence modal ---------- */
 function openWordModal(v){
   playTap();
+  speakKorean(v.t);
   var found=null;
   for(var i=0;i<grammarLevels.length&&!found;i++){
     var pats=grammarLevels[i].patterns;
@@ -2840,8 +2986,10 @@ function openWordModal(v){
 
 var onboardSteps=[
   {title:'환영합니다! (Welcome!)',body:'KoreanLang teaches real, everyday Korean through five progressive levels — grammar, quizzes, games, and a sentence-growing tool called GrowKOR.'},
-  {title:'Grammar → Quiz',body:'Each level starts with a grammar lesson. Tap any example to hear it spoken. Then take the 3-part quiz (Translation, Phonetics, Word Match) — score 7/10 in each to unlock the next level.'},
-  {title:'GrowKOR & Games',body:'GrowKOR lets you build real Korean sentences branch by branch. The Games tab has five more ways to practice: Sentence Builder, Opposite Game, Conversation Fill, Word Match, and Flashcards.'},
+  {title:'Grammar → Quiz',body:'Each level starts with a grammar lesson. Tap any example to hear it spoken. Then take the 3-part quiz (Translation, Phonetics, and a level-specific mini-game) — score 7/10 in the first two, survive the mini-game, to unlock the next level.'},
+  {title:'Games',body:'8 games reinforce what you learn — Word Match, Flashcards, Sentence Builder, Days & Months, Conversation Fill, Opposite Game, Question Builder, and Tense Transformer. Win a game to help unlock the next grammar level — quiz alone isn’t enough. More games unlock and every game’s vocabulary grows as you progress.'},
+  {title:'GrowKOR',body:'Build real Korean sentences branch by branch, following actual SOV grammar. Themed word pools rotate to keep it fresh, and unlock further as you clear more levels.'},
+  {title:'Start with Level 1',body:'Learn Hangul basics and greetings, then build from there.',btn:'Start Learning'},
 ];
 var onboardStep=0;
 function showOnboarding(){
