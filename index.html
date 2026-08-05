@@ -92,13 +92,14 @@
       <div style="font-size:12px;color:var(--text3);text-align:center" id="dv-score"></div>
     </div>
 
-    <!-- GAME: Tteokbokki Cart (Level 2) -->
+    <!-- GAME: Falling Rice (Level 2) -->
     <div id="game-cart" style="display:none;min-height:60vh;flex-direction:column;justify-content:center">
-      <div style="font-size:12px;color:var(--text2);text-align:center;margin-bottom:10px">Tap the correct bowl before the skewer lands</div>
-      <div id="cart-illust" style="margin-bottom:12px"></div>
-      <div id="cart-track" style="position:relative;height:160px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);margin-bottom:14px;overflow:hidden">
-        <div id="cart-falling" style="position:absolute;left:50%;top:-40px;transform:translateX(-50%);text-align:center;transition:top linear"></div>
+      <div style="font-size:12px;color:var(--text2);text-align:center;margin-bottom:10px">Catch the meaning before the rice hits the ground</div>
+      <div id="cart-track" style="position:relative;height:170px;border:1px solid var(--border);border-radius:var(--r);margin-bottom:2px;overflow:hidden">
+        <div id="cart-falling" style="position:absolute;left:50%;top:-50px;transform:translateX(-50%);text-align:center;transition:top linear"></div>
+        <div style="position:absolute;left:0;right:0;bottom:6px;text-align:center;font-size:11px;color:var(--red);opacity:.75">✳ ground ✳</div>
       </div>
+      <div style="height:2px;background:var(--red);opacity:.5;margin-bottom:14px"></div>
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px" id="cart-bowls"></div>
       <div style="font-size:15px;font-weight:600;text-align:center;min-height:22px;margin-bottom:8px" id="cart-result"></div>
       <div style="font-size:12px;color:var(--text3);text-align:center" id="cart-score"></div>

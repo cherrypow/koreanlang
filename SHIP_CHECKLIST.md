@@ -34,7 +34,7 @@ Games tab into `#sec-quiz` and rewired as each level's Test 3, dispatched by
 | Level | Game | Win condition | Lose condition |
 |---|---|---|---|
 | 1 | Delivery Boxes (택배 상자) | 8 correct bin-sorts | 3 wrong |
-| 2 | Tteokbokki Cart (떡볶이 포장마차) | 6 caught skewers | 3 missed |
+| 2 | Falling Rice | 6 caught | 3 missed |
 | 3 | Transfer (환승) | 3 completed sentences | 3 wrong tile taps |
 | 4 | Noraebang 100 (노래방 100) | reach 100점 | 3 misses |
 | 5 | Suneung Mock Exam (수능 모의고사) | 7 correct (same-category distractors) | 5 wrong |
@@ -126,7 +126,7 @@ ported to KoreanLang:
 
 | System | ManLang has it as... | Status |
 |---|---|---|
-| Arcade minigames | Bamboo Rain, Panda Climb, Lantern Catch, Dragon Whisper, Wall Builder (quiz-mode-3 games) | ✅ Ported as Korean-themed equivalents — Delivery Boxes, Tteokbokki Cart, Transfer, Noraebang 100, Suneung Mock Exam |
+| Arcade minigames | Bamboo Rain, Panda Climb, Lantern Catch, Dragon Whisper, Wall Builder (quiz-mode-3 games) | ✅ Ported as Korean-themed equivalents — Delivery Boxes, Falling Rice, Transfer, Noraebang 100, Suneung Mock Exam |
 | Extra grammar page types | Speed Round, Listen & Repeat, Sentence Grow (paginated-lesson bonus pages) | ⬜ Not ported — v1.1+ backlog |
 | Home road art | Photographic `home-bg1.png` with baked-in level cards + absolutely-positioned tap zones | ⬜ Not ported — needs real illustration; using SVG-badge cards instead |
 | Tense Transformer / Question Builder | Extra Games-tab entries beyond the 5 already in KoreanLang | ⬜ Not ported — v1.1+ backlog |

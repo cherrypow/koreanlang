@@ -1713,7 +1713,7 @@ function backToPicker(){document.getElementById('flash-picker').style.display=''
    before hitting the wrong-answer limit, or it's an immediate loss.
    ============================================================ */
 var QUIZ_GAME_BY_LEVEL={1:'delivery',2:'cart',3:'transfer',4:'noraebang',5:'suneung'};
-var QUIZ_GAME_TITLE={1:'Delivery Boxes',2:'Tteokbokki Cart',3:'Transfer',4:'Noraebang 100',5:'Suneung Mock Exam'};
+var QUIZ_GAME_TITLE={1:'Delivery Boxes',2:'Falling Rice',3:'Transfer',4:'Noraebang 100',5:'Suneung Mock Exam'};
 var _quizGameTimers=[]; // every setTimeout handle any Test-3 game schedules goes here
 function qgSetTimeout(fn,ms){ var id=setTimeout(fn,ms); _quizGameTimers.push(id); return id; }
 function stopAllQuizGameTimers(){
@@ -1805,11 +1805,10 @@ function renderDeliveryRound(){
   document.getElementById('dv-result').textContent='';
 }
 
-/* ---------- Level 2 Test 3: Tteokbokki Cart (win 6 correct, 3 wrong = out) ---------- */
+/* ---------- Level 2 Test 3: Falling Rice (win 6 correct, 3 wrong = out) ---------- */
 var cartScore=0, cartWrong=0, cartAnswered=false, cartTimer=null, cartFallMs=4200, CART_WIN=6, CART_LOSE=3;
 function startCart(){
   cartScore=0;cartWrong=0;
-  document.getElementById('cart-illust').innerHTML=gsWrap('#3a1500',gsBowl(100,80));
   renderCartRound();
 }
 function renderCartRound(){
@@ -1823,8 +1822,10 @@ function renderCartRound(){
   var opts=shuffle([item].concat(distractors));
   var falling=document.getElementById('cart-falling');
   falling.style.transition='none';
-  falling.style.top='-40px';
-  falling.innerHTML='<div style="background:var(--bg3);border:1.5px solid var(--border2);border-radius:10px;padding:8px 14px"><div style="font-size:20px;color:var(--text)">'+item.t+'</div><div style="font-size:11px;color:var(--purple)">'+item.p+'</div></div>';
+  falling.style.top='-50px';
+  falling.innerHTML='<div style="font-size:32px;line-height:1">🍚</div>'+
+    '<div style="font-size:17px;color:var(--text);font-weight:600">'+item.t+'</div>'+
+    '<div style="font-size:10px;color:var(--purple)">'+item.p+'</div>';
   var bowlsEl=document.getElementById('cart-bowls'); bowlsEl.innerHTML='';
   opts.forEach(function(o){
     var b=document.createElement('button'); b.className='qbtn'; b.textContent=o.e;
@@ -1835,7 +1836,7 @@ function renderCartRound(){
   requestAnimationFrame(function(){
     requestAnimationFrame(function(){
       falling.style.transition='top '+(cartFallMs/1000)+'s linear';
-      falling.style.top='120px';
+      falling.style.top='108px';
     });
   });
   cartTimer=setTimeout(function(){cartAnswer(false,null,item);},cartFallMs);
